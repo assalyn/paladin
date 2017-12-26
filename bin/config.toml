@@ -1,0 +1,24 @@
+# 枚举表
+enumFile = "xlsx/enum.xlsx"
+
+# 多语言表
+localeFile = "xlsx/多语言表.xlsx"
+
+# 配置表忽略的头几行
+ignoreLine = 3
+
+[tables]
+  [tables.zhuangbei]
+  #sheet = "装备"
+  workbook = "xlsx/装备表.xlsx"
+  autoId = true
+  horizontal = false
+  enums = [
+    {field = "class_1", table = "物品大类"},
+    {field = "class_2", table = "物品小类"},
+  ]
+
+  [tables.duoyuyan]
+  #sheet = "全局多语言"
+  workbook = "xlsx/多语言表.xlsx"
+  autoId = true

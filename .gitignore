@@ -1,0 +1,10 @@
+*.log
+*.exe
+*.pyc
+*.rar
+*.json
+gin-bin.*
+/bin/*.exe
+/bin/*_server
+/pkg
+/.idea
