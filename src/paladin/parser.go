@@ -38,7 +38,7 @@ func (p *Parser) Start() {
 	p.loadFiles()
 
 	// 解析数据文件
-	p.parseData()
+	p.parse()
 
 	// 解析多语言文件
 
@@ -53,7 +53,7 @@ func (p *Parser) Start() {
 func (p *Parser) loadFiles() {
 	// 加载枚举文件
 	reader := NewXlsxReader(false, false)
-	enumInfo, err := reader.Read("enum", conf.Cfg.EnumFile)
+	enumInfo, err := reader.Read("enum", conf.Cfg.EnumFile, nil)
 	if err != nil {
 		plog.Panic("读取枚举表失败!!", err)
 	}
@@ -62,10 +62,7 @@ func (p *Parser) loadFiles() {
 	// 加载xlsx文件
 	for tblName, tbl := range conf.Cfg.Tables {
 		reader := NewXlsxReader(tbl.AutoId, tbl.Horizontal)
-		if err = reader.LoadEnum(tbl.Enums); err != nil {
-			plog.Errorf("%s加载枚举配置失败！错误码:%v\n", tbl.Workbook, err)
-		}
-		info, err := reader.Read(tblName, tbl.Workbook)
+		info, err := reader.Read(tblName, tbl.Workbook, tbl.Enums)
 		if err != nil {
 			plog.Errorf("读取%s失败！错误码:%v\n", tbl.Workbook, err)
 		}
@@ -74,7 +71,7 @@ func (p *Parser) loadFiles() {
 
 	// 加载多语言文件
 	reader = NewXlsxReader(false, false)
-	localeInfo, err := reader.Read("locale", conf.Cfg.LocaleFile)
+	localeInfo, err := reader.Read("locale", conf.Cfg.LocaleFile, nil)
 	if err != nil {
 		plog.Panic("读取多语言表失败!!", err)
 	}
@@ -82,7 +79,7 @@ func (p *Parser) loadFiles() {
 }
 
 // 解析
-func (p *Parser) parseData() {
+func (p *Parser) parse() {
 	for tableName, info := range p.Xlsx {
 		p.parseXlsx(tableName, info)
 	}
@@ -111,46 +108,62 @@ func (p *Parser) genStubCode() {
 }
 
 ////////////////////////////////////// 子函数 //////////////////////////////////////
+// 解析xlsx文件
 func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 	plog.Trace(tableName)
+	totalStructs := make(map[int]interface{})
+	// 创建数据结构
 	for subTableName, rows := range info.Rows {
+		// 先处理单表
 		plog.Trace("解析", subTableName)
 		// 枚举替换
-		if err := p.swapEnum(info); err != nil {
+		if err := p.swapEnum(rows); err != nil {
 			plog.Error(tableName, "替换枚举出错", err)
 		}
 		// 参数展开
-		if err := p.expandParam(info); err != nil {
+		if err := p.expandParam(rows); err != nil {
 			plog.Error(tableName, "参数展开出错", err)
 		}
 		// ...其他展开
 
+		data := p.createStruct(rows)
 		// 创建数据结构, 赋值
-		p.Output[tableName] = p.createStruct()
+		p.mergeMap(totalStructs, data)
 	}
+	p.Output[tableName] = totalStructs
 }
 
 // 枚举替换
-func (p *Parser) swapEnum(info *XlsxInfo) error {
+func (p *Parser) swapEnum(rows [][]string) error {
 	// todo
-	// rows[0] 是数据类型
+	// rows[0] 数据类型, 第1行和第4行
 	// rows[1] 是数据名称
 	// rows[2] 是辅助记忆描述，可忽略
 	return nil
 }
 
 // 参数展开
-func (p *Parser) expandParam(info *XlsxInfo) error {
+func (p *Parser) expandParam(rows [][]string) error {
 	// todo
 	return nil
 }
 
-// 创建数据结构, 赋值
-func (p *Parser) createStruct() interface{} {
-	// rows[0] 是数据类型
-	// rows[1] 是数据名称
-	// rows[2] 是辅助记忆描述，可忽略
-	return nil
+// 创建数据结构, map->struct, id作为索引
+func (p *Parser) createStruct(rows [][]string) map[int]interface{} {
+	data := make(map[int]interface{})
+	if len(rows) < conf.Cfg.IgnoreLine {
+		plog.Errorf("错误xlsx数据格式，表头只有%v行，不足%v行\n", len(rows), conf.Cfg.IgnoreLine)
+		return data
+	}
+	builder := NewStructBuilder(rows[:conf.Cfg.IgnoreLine])
+	for rowIdx, row := range rows {
+		if rowIdx < conf.Cfg.IgnoreLine {
+			continue
+		}
+		id, value := builder.CreateInstance(rowIdx, row)
+		data[id] = value
+	}
+	return data
 }
 
 func (p *Parser) outputJson() {
@@ -163,5 +176,16 @@ func (p *Parser) outputJson() {
 		if err = encoder.Encode(outputData); err != nil {
 			plog.Error(tableName, "导出json失败", err)
 		}
+	}
+}
+
+// 合并map数据
+func (p *Parser) mergeMap(origin map[int]interface{}, addMap map[int]interface{}) {
+	for id, value := range addMap {
+		if origin[id] != nil {
+			plog.Error("ID冲突 id=", id)
+			continue
+		}
+		origin[id] = value
 	}
 }
