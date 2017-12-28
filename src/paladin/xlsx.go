@@ -42,7 +42,7 @@ func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumIt
 
 	info := NewXlsxInfo()
 	info.TableName = tableName
-	plog.Info(tableName, "读取", xlsxFile, " 子表", xlsx.GetSheetMap())
+	//plog.Info(tableName, "读取", xlsxFile, " 子表", xlsx.GetSheetMap())
 	for _, name := range xlsx.GetSheetMap() {
 		info.Rows[name] = xlsx.GetRows(name)
 	}

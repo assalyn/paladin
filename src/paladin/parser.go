@@ -1,6 +1,7 @@
 package paladin
 
 import (
+	"cmn"
 	"conf"
 	"encoding/json"
 	"frm/plog"
@@ -14,8 +15,11 @@ type Parser struct {
 	Locale *XlsxInfo            // 多语言
 	Xlsx   map[string]*XlsxInfo // 表代号->xlsx数据
 
-	// 生成数据
-	Output map[string]interface{} // 生成待输出的数据
+	// 中间数据
+	EnumSwapDict    map[string]map[string]string            // 枚举替换表 子表->field->内容
+	ParamUnfoldDict map[string]map[string]string            // 参数展开表 子表->替换项->内容
+	LocaleSwapDict  map[string]map[string]map[string]string // 多语言替换表 子表->语言->field->内容
+	Output          map[string]interface{}                  // 生成待输出的数据
 
 	// 内部使用变量
 	outputDir string
@@ -26,7 +30,12 @@ type Parser struct {
 func NewParser(outputDir string, genGolang bool, genCsharp bool) *Parser {
 	p := new(Parser)
 	p.Xlsx = make(map[string]*XlsxInfo)
+
+	p.EnumSwapDict = make(map[string]map[string]string)
+	p.ParamUnfoldDict = make(map[string]map[string]string)
+	p.LocaleSwapDict = make(map[string]map[string]map[string]string)
 	p.Output = make(map[string]interface{})
+
 	p.outputDir = outputDir
 	p.genGolang = genGolang
 	p.genCsharp = genCsharp
@@ -37,10 +46,11 @@ func (p *Parser) Start() {
 	// 加载文件
 	p.loadFiles()
 
+	// 准备中间数据
+	p.prepare()
+
 	// 解析数据文件
 	p.parse()
-
-	// 解析多语言文件
 
 	// 导出为json
 	p.output("json")
@@ -78,6 +88,17 @@ func (p *Parser) loadFiles() {
 	p.Locale = localeInfo
 }
 
+func (p *Parser) prepare() {
+	// 构建枚举替换结构
+	p.structEnumSwapMap()
+
+	// 构建参数展开结构
+	p.structParamUnfoldMap()
+
+	// 构建多语言替换结构
+	p.structLocaleSwapMap()
+}
+
 // 解析
 func (p *Parser) parse() {
 	for tableName, info := range p.Xlsx {
@@ -87,6 +108,16 @@ func (p *Parser) parse() {
 
 // 导出
 func (p *Parser) output(fmt string) {
+	// 校验outputDir是否存在
+	if err := os.MkdirAll(p.outputDir, 0777); err != nil {
+		plog.Errorf("创建目录%v失败%v\n", p.outputDir, err)
+		return
+	}
+	// 校验localeDir是否存在
+	if err := os.MkdirAll(p.outputDir+"/locale", 0777); err != nil {
+		plog.Errorf("创建目录%v失败%v\n", p.outputDir, err)
+		return
+	}
 	fmt = strings.ToLower(fmt)
 	switch fmt {
 	case "json":
@@ -110,20 +141,25 @@ func (p *Parser) genStubCode() {
 ////////////////////////////////////// 子函数 //////////////////////////////////////
 // 解析xlsx文件
 func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
-	plog.Trace(tableName)
+	xlsxConf := conf.Cfg.Tables[tableName]
 	totalStructs := make(map[int]interface{})
 	// 创建数据结构
 	for subTableName, rows := range info.Rows {
 		// 先处理单表
-		plog.Trace("解析", subTableName)
+		plog.Infof("解析 %v.%v\n", tableName, subTableName)
 		// 枚举替换
-		if err := p.swapEnum(rows); err != nil {
+		if err := p.swapEnum(rows, xlsxConf.Enums); err != nil {
 			plog.Error(tableName, "替换枚举出错", err)
 		}
 		// 参数展开
 		if err := p.expandParam(rows); err != nil {
 			plog.Error(tableName, "参数展开出错", err)
 		}
+		// 多语言替换
+		if err := p.swapLocale(rows, xlsxConf.Locales, conf.Cfg.Locale); err != nil {
+			plog.Error(tableName, "多语言替换出错", err)
+		}
+
 		// ...其他展开
 
 		data := p.createStruct(rows)
@@ -134,17 +170,67 @@ func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 }
 
 // 枚举替换
-func (p *Parser) swapEnum(rows [][]string) error {
-	// todo
-	// rows[0] 数据类型, 第1行和第4行
-	// rows[1] 是数据名称
-	// rows[2] 是辅助记忆描述，可忽略
+func (p *Parser) swapEnum(origin [][]string, enumItems []conf.EnumItem) error {
+	// 要先初始化好enum表
+	for _, enumItem := range enumItems {
+		swapTable := p.EnumSwapDict[enumItem.Table]
+		if swapTable == nil {
+			plog.Error("枚举替换表不存在!!", enumItem.Table)
+			return cmn.ErrNotExist
+		}
+		p.swapEnumField(origin, enumItem.Field, swapTable)
+	}
 	return nil
+}
+
+// 替换枚举列，把数据的field列内容进行替换
+func (p *Parser) swapEnumField(origin [][]string, field string, swapTable map[string]string) error {
+	var err error = nil
+
+	column := 0
+	for ; column < len(origin[0]); column++ {
+		if origin[1][column] == field {
+			break
+		}
+	}
+	// column就是要找的列
+	for rowIdx := 0; rowIdx < len(origin); rowIdx++ {
+		// 前ignoreLine行是结构，不替换
+		if rowIdx < conf.Cfg.IgnoreLine {
+			continue
+		}
+		newValue, ok := swapTable[origin[rowIdx][column]]
+		if ok == false {
+			plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
+			err = cmn.ErrFail
+			continue
+		}
+		origin[rowIdx][column] = newValue
+	}
+	return err
 }
 
 // 参数展开
 func (p *Parser) expandParam(rows [][]string) error {
 	// todo
+	return nil
+}
+
+// 多语言替换
+func (p *Parser) swapLocale(origin [][]string, LocaleItems []conf.LocaleItem, locale string) error {
+	for _, localeItem := range LocaleItems {
+		localeSwapTable := p.LocaleSwapDict[localeItem.Table]
+		if localeSwapTable == nil {
+			plog.Errorf("多语言替换子表%v不存在!!\n", localeItem.Table)
+			return cmn.ErrNotExist
+		}
+		swapTable := localeSwapTable[locale]
+		if swapTable == nil {
+			plog.Errorf("多语言替换表%v不存在语言%v!!\n", localeItem.Table, locale)
+			return cmn.ErrNotExist
+		}
+		p.swapEnumField(origin, localeItem.Field, swapTable)
+	}
 	return nil
 }
 
@@ -167,14 +253,37 @@ func (p *Parser) createStruct(rows [][]string) map[int]interface{} {
 }
 
 func (p *Parser) outputJson() {
+	// 导出数据文件
 	for tableName, outputData := range p.Output {
-		outputFile, err := os.Create(p.outputDir + tableName + ".json")
+		outputFile, err := os.Create(p.outputDir + "/" + tableName + ".json")
 		if err != nil {
 			plog.Error(tableName, "生成文件失败", err)
+			continue
 		}
 		encoder := json.NewEncoder(outputFile)
 		if err = encoder.Encode(outputData); err != nil {
 			plog.Error(tableName, "导出json失败", err)
+			continue
+		}
+	}
+
+	// 导出locale文件
+	for tableName, localeSwapDict := range p.LocaleSwapDict {
+		for locale, swapTable := range localeSwapDict {
+			if err := os.MkdirAll(p.outputDir+"/locale/"+locale, 0777); err != nil {
+				plog.Errorf("创建多语言目录%v失败\n", p.outputDir+"/"+locale)
+				continue
+			}
+			localeFile, err := os.Create(p.outputDir + "/locale/" + locale + "/" + tableName + ".json")
+			if err != nil {
+				plog.Error(tableName, "生成多语言文件失败", err)
+				continue
+			}
+			encoder := json.NewEncoder(localeFile)
+			if err = encoder.Encode(swapTable); err != nil {
+				plog.Error(tableName, "导出多语言文件json失败", err)
+				continue
+			}
 		}
 	}
 }

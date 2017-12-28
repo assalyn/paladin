@@ -6,12 +6,25 @@ import (
 	"fmt"
 	"frm/plog"
 	"reflect"
+
+	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
 func main() {
 	plog.InitLog("test.log", plog.LOG_TRACE)
 
-	TestCamelName()
+	xlsx, err := excelize.OpenFile("bin/xlsx/位置表.xlsx")
+	if err != nil {
+		plog.Errorf("fail to read %s!! %v\n", "../../bin/xlsx/位置表.xlsx", err)
+		return
+	}
+
+	//plog.Info(tableName, "读取", xlsxFile, " 子表", xlsx.GetSheetMap())
+	dict := make(map[string][][]string)
+	for _, name := range xlsx.GetSheetMap() {
+		dict[name] = xlsx.GetRows(name)
+	}
+	fmt.Printf("%+v\n", dict)
 }
 
 func TestCamelName() {

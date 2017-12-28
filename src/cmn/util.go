@@ -13,7 +13,7 @@ func CamelName(textStr string) string {
 	text := []byte(textStr)
 
 	// 字符集校验
-	match, _ := regexp.Match("^[a-zA-Z][a-zA-Z0-9_]+$", text)
+	match, _ := regexp.Match("^[a-zA-Z][a-zA-Z0-9_]*$", text)
 	if match == false {
 		plog.Error("类型名含有非法字符！", string(text))
 		return ""

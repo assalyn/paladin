@@ -52,7 +52,7 @@ func (p *StructBuilder) CreateInstance(rowIdx int, row []string) (id int, value 
 	for column := 0; column < len(row); column++ {
 		p.assignMember(elem, rowIdx, column, row)
 	}
-	return 0, structValue.Interface()
+	return id, structValue.Interface()
 }
 
 // 给member成员赋值
