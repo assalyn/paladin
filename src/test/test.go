@@ -7,24 +7,25 @@ import (
 	"frm/plog"
 	"reflect"
 
-	"github.com/360EntSecGroup-Skylar/excelize"
+	"github.com/tealeg/xlsx"
 )
 
 func main() {
 	plog.InitLog("test.log", plog.LOG_TRACE)
 
-	xlsx, err := excelize.OpenFile("bin/xlsx/位置表.xlsx")
+	xlsxFile, err := xlsx.OpenFile("bin/xlsx/位置表.xlsx")
 	if err != nil {
 		plog.Errorf("fail to read %s!! %v\n", "../../bin/xlsx/位置表.xlsx", err)
 		return
 	}
 
 	//plog.Info(tableName, "读取", xlsxFile, " 子表", xlsx.GetSheetMap())
-	dict := make(map[string][][]string)
-	for _, name := range xlsx.GetSheetMap() {
-		dict[name] = xlsx.GetRows(name)
+	for _, sheet := range xlsxFile.Sheets {
+		for rowIdx, row := range sheet.Rows {
+			fmt.Println(sheet.Name, rowIdx, len(row.Cells))
+		}
 	}
-	fmt.Printf("%+v\n", dict)
+	fmt.Printf("hello \n")
 }
 
 func TestCamelName() {
