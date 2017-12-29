@@ -6,26 +6,10 @@ import (
 	"fmt"
 	"frm/plog"
 	"reflect"
-
-	"github.com/tealeg/xlsx"
 )
 
 func main() {
 	plog.InitLog("test.log", plog.LOG_TRACE)
-
-	xlsxFile, err := xlsx.OpenFile("bin/xlsx/位置表.xlsx")
-	if err != nil {
-		plog.Errorf("fail to read %s!! %v\n", "../../bin/xlsx/位置表.xlsx", err)
-		return
-	}
-
-	//plog.Info(tableName, "读取", xlsxFile, " 子表", xlsx.GetSheetMap())
-	for _, sheet := range xlsxFile.Sheets {
-		for rowIdx, row := range sheet.Rows {
-			fmt.Println(sheet.Name, rowIdx, len(row.Cells))
-		}
-	}
-	fmt.Printf("hello \n")
 }
 
 func TestCamelName() {
