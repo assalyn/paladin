@@ -19,7 +19,7 @@ type Parser struct {
 	EnumSwapDict    map[string]map[string]string            // 枚举替换表 子表->field->内容
 	ParamUnfoldDict map[string]map[string]string            // 参数展开表 子表->替换项->内容
 	LocaleSwapDict  map[string]map[string]map[string]string // 多语言替换表 子表->语言->field->内容
-	Output          map[string]interface{}                  // 生成待输出的数据
+	Output          map[string]map[int]interface{}          // 待输出的数据 字表->id->内容
 
 	// 内部使用变量
 	outputDir string
@@ -34,7 +34,7 @@ func NewParser(outputDir string, genGolang bool, genCsharp bool) *Parser {
 	p.EnumSwapDict = make(map[string]map[string]string)
 	p.ParamUnfoldDict = make(map[string]map[string]string)
 	p.LocaleSwapDict = make(map[string]map[string]map[string]string)
-	p.Output = make(map[string]interface{})
+	p.Output = make(map[string]map[int]interface{})
 
 	p.outputDir = outputDir
 	p.genGolang = genGolang
@@ -54,6 +54,9 @@ func (p *Parser) Start() {
 
 	// 导出为json
 	p.output("json")
+
+	// 输出多语言文件
+	p.outputLocale()
 
 	// 是否生成桩文件
 	p.genStubCode()
@@ -113,11 +116,6 @@ func (p *Parser) output(fmt string) {
 		plog.Errorf("创建目录%v失败%v\n", p.outputDir, err)
 		return
 	}
-	// 校验localeDir是否存在
-	if err := os.MkdirAll(p.outputDir+"/locale", 0777); err != nil {
-		plog.Errorf("创建目录%v失败%v\n", p.outputDir, err)
-		return
-	}
 	fmt = strings.ToLower(fmt)
 	switch fmt {
 	case "json":
@@ -128,13 +126,46 @@ func (p *Parser) output(fmt string) {
 	}
 }
 
+func (p *Parser) outputLocale() {
+	// 校验localeDir是否存在
+	if err := os.MkdirAll(p.outputDir+"/locale", 0777); err != nil {
+		plog.Errorf("创建目录%v失败%v\n", p.outputDir, err)
+		return
+	}
+	// 导出locale文件
+	for tableName, localeSwapDict := range p.LocaleSwapDict {
+		for locale, swapTable := range localeSwapDict {
+			if err := os.MkdirAll(p.outputDir+"/locale/"+locale, 0777); err != nil {
+				plog.Errorf("创建多语言目录%v失败\n", p.outputDir+"/"+locale)
+				continue
+			}
+			localeFile, err := os.Create(p.outputDir + "/locale/" + locale + "/" + tableName + ".json")
+			if err != nil {
+				plog.Error(tableName, "生成多语言文件失败", err)
+				continue
+			}
+			encoder := json.NewEncoder(localeFile)
+			if err = encoder.Encode(swapTable); err != nil {
+				plog.Error(tableName, "导出多语言文件json失败", err)
+				continue
+			}
+		}
+	}
+}
+
 // 生成桩文件
 func (p *Parser) genStubCode() {
+	stubDir := "stub"
+	// 校验dbc是否存在
+	if err := os.MkdirAll(stubDir, 0777); err != nil {
+		plog.Errorf("创建目录%v失败%v\n", stubDir, err)
+		return
+	}
 	if p.genGolang {
-		p.genGolangStub()
+		p.genGolangStub(stubDir)
 	}
 	if p.genCsharp {
-		p.genCsharpStub()
+		p.genCsharpStub(stubDir)
 	}
 }
 
@@ -155,11 +186,6 @@ func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 		if err := p.expandParam(rows); err != nil {
 			plog.Error(tableName, "参数展开出错", err)
 		}
-		// 多语言替换
-		if err := p.swapLocale(rows, xlsxConf.Locales, conf.Cfg.Locale); err != nil {
-			plog.Error(tableName, "多语言替换出错", err)
-		}
-
 		// ...其他展开
 
 		data := p.createStruct(rows)
@@ -267,25 +293,6 @@ func (p *Parser) outputJson() {
 		}
 	}
 
-	// 导出locale文件
-	for tableName, localeSwapDict := range p.LocaleSwapDict {
-		for locale, swapTable := range localeSwapDict {
-			if err := os.MkdirAll(p.outputDir+"/locale/"+locale, 0777); err != nil {
-				plog.Errorf("创建多语言目录%v失败\n", p.outputDir+"/"+locale)
-				continue
-			}
-			localeFile, err := os.Create(p.outputDir + "/locale/" + locale + "/" + tableName + ".json")
-			if err != nil {
-				plog.Error(tableName, "生成多语言文件失败", err)
-				continue
-			}
-			encoder := json.NewEncoder(localeFile)
-			if err = encoder.Encode(swapTable); err != nil {
-				plog.Error(tableName, "导出多语言文件json失败", err)
-				continue
-			}
-		}
-	}
 }
 
 // 合并map数据

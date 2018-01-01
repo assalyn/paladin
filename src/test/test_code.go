@@ -3,27 +3,30 @@ package main
 import (
 	"frm/plog"
 
-	"github.com/dave/jennifer/jen"
+	"cmn"
+	"reflect"
+
+	"strings"
+
+	"fmt"
+
+	"regexp"
+
+	"paladin"
+
 	"github.com/tealeg/xlsx"
 )
 
 func main() {
 	// 读取数据
 	data := readStruct()
+	builder := NewTestBuilder(data[:4])
+	builder.BuildStruct()
+	fmt.Printf("%#v\n", builder.StructType)
+	builder.CreateInstance()
 
-	// 生成数据定义文件
-	gtor := NewGenerator("equip", data[:4])
-	gtor.Parse()
-	gtor.Write()
-
-	//// 解析rows, 生成struct
-	//f := NewFile("main")
-	//f.Func().Id("main").Params().Block(
-	//	Qual("fmt", "Println").Call(Lit("Hello, world")),
-	//)
-	//if err := f.Save("main.dbc.go"); err != nil {
-	//	plog.Error(err)
-	//}
+	coder := paladin.NewCodeBuilder("AAA")
+	coder.DebugType(builder.StructType, "AAA")
 }
 
 func readStruct() [][]string {
@@ -46,31 +49,152 @@ func readStruct() [][]string {
 	return nil
 }
 
-type Generator struct {
-	*jen.File
-	fileName string
-	rows     [][]string
+// 测试生成程序
+type TestBuilder struct {
+	typeDesc   []string // 类型描述 rows[0]
+	layerDesc  []string // 层级描述 rows[3]
+	rows       [][]string
+	StructType reflect.Type
 }
 
-func NewGenerator(fileName string, data [][]string) *Generator {
-	p := new(Generator)
-	p.fileName = fileName + ".dbc.go"
-	p.File = jen.NewFile(p.fileName)
-	p.rows = data
-	return p
+func NewTestBuilder(rows [][]string) *TestBuilder {
+	builder := new(TestBuilder)
+	builder.typeDesc = rows[0]
+	builder.layerDesc = rows[3]
+	builder.rows = rows
+	fmt.Println("layer description=", builder.layerDesc)
+	return builder
 }
 
-// 进行解析. 能根据数据结构生成类型定义文件不？
-func (p *Generator) Parse() {
-	// rows[0] 是数据结构 INT
-	// rows[1] 是变量名称
-	// rows[2] 是数据归属
-	for column := 0; column < len(p.rows[0]); column++ {
+func (p *TestBuilder) BuildStruct() {
+	fields := make([]reflect.StructField, 0, 8)
+	column := 0
+	for column < len(p.layerDesc) {
+		field, err := p.parseField(&column)
+		if err != nil {
+			fmt.Println("错误的数据结构", err)
+			return
+		}
+		// 空数据结构，退出
+		if field.Name == "" {
+			break
+		}
+		fields = append(fields, field)
+	}
+	p.StructType = reflect.StructOf(fields)
+}
 
+// 先不考虑map
+func (p *TestBuilder) parseField(column *int) (field reflect.StructField, err error) {
+	currDesc := p.layerDesc[*column]
+	if currDesc == "" {
+		field = reflect.StructField{
+			Type: p.memberType(p.rows[0][*column]),
+			Name: cmn.CamelName(p.rows[1][*column]),
+		}
+		*column++
+		return
+	}
+
+	i := *column
+	for ; i < len(p.layerDesc); i++ {
+		if p.layerDesc[i] != currDesc {
+			break
+		}
+	}
+
+	// 将连续的一组都选出来
+	layers := strings.Split(currDesc, ".")
+	// [XXX]数组结构; {XXX}map结构; XXX内部数据结构
+	subName, subType := p.layerType(layers[0])
+	switch subType {
+	case "member":
+		// 子成员
+		field = reflect.StructField{
+			Type: p.memberType(p.rows[0][*column]),
+			Name: cmn.CamelName(p.rows[1][*column]),
+		}
+		*column++
+		return
+
+	case "struct":
+		// 子struct类型, struct结束时创建数据结构
+		var fs []reflect.StructField
+		for j := *column; j < i; j++ {
+			fs = append(fs, reflect.StructField{
+				Type: p.memberType(p.rows[0][j]),
+				Name: cmn.CamelName(p.rows[1][j]),
+			})
+		}
+		subStruct := reflect.StructOf(fs)
+		field = reflect.StructField{
+			Type: subStruct,
+			Name: cmn.CamelName(subName),
+		}
+		*column = i
+		return
+
+	case "slice":
+		// 记录这个slice类型, 结束时创建数据结构. 并赋值给上级数据结构. 要用递归结构
+		for j := *column; j < i; j++ {
+
+		}
+		subStruct := reflect.StructOf()
+		sliceStruct := reflect.SliceOf(subStruct)
+		field = reflect.StructField{
+			Type: sliceStruct,
+			Name: cmn.CamelName(subName),
+		}
+		*column = i
+		return
+
+	case "map":
+		// 记录这个map类型, 结束时创建数据结构
+
+	default:
+		fmt.Println("错误的依赖类型", currDesc)
+	}
+	return
+}
+
+func (p *TestBuilder) memberType(typeName string) reflect.Type {
+	typeName = strings.ToUpper(typeName)
+	switch typeName {
+	case "UINT":
+		return reflect.TypeOf(uint(0))
+
+	case "INT":
+		return reflect.TypeOf(int(0))
+
+	case "STRING":
+		return reflect.TypeOf("")
+
+	case "DOUBLE":
+		return reflect.TypeOf(float64(0))
+
+	default:
+		plog.Error("Unsupport type!", typeName)
+		return reflect.TypeOf(int(0))
 	}
 }
 
-// 导出到文件
-func (p *Generator) Write() {
-	p.Save(p.fileName)
+func (p *TestBuilder) CreateInstance() {
+
+}
+
+// 通过layer描述获取数据结构
+func (p *TestBuilder) layerType(layerDesc string) (subName string, subType string) {
+	if layerDesc == "" {
+		return "", "member"
+	} else if layerDesc[0] == '[' && layerDesc[len(layerDesc)-1] == ']' {
+		return layerDesc[1 : len(layerDesc)-2], "slice"
+	} else if layerDesc[0] == '{' && layerDesc[len(layerDesc)-1] == '}' {
+		return layerDesc[1 : len(layerDesc)-2], "map"
+	}
+	matched, _ := regexp.Match("[a-zA-Z0-9_]*", []byte(layerDesc))
+	if matched {
+		return layerDesc, "struct"
+	} else {
+		return "", "invalid"
+	}
 }

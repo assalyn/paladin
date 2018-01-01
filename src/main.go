@@ -14,7 +14,6 @@ import (
 
 // 参数解析
 func main() {
-
 	app := cli.NewApp()
 	app.Name = "test"
 	app.Usage = "unify test suit"
@@ -29,7 +28,12 @@ func main() {
 		cli.StringFlag{
 			Name:  "output,o",
 			Usage: "output directory",
-			Value: "output",
+			Value: "dbc",
+		},
+		cli.StringFlag{
+			Name:  "stub,sd",
+			Usage: "generated stub code directory",
+			Value: "stub",
 		},
 		cli.BoolFlag{
 			Name:  "golang,go",

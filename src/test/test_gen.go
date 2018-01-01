@@ -39,8 +39,9 @@ type AAA struct {
 func main() {
 	plog.InitLog("app.log", plog.LOG_TRACE)
 
+	var x interface{} = &AAA{}
 	c := NewCoder("equip")
-	c.GenStruct(&AAA{})
+	c.GenStruct(x)
 	c.Output(true)
 }
 
@@ -109,17 +110,18 @@ func (p *Coder) genValue(t reflect.Type) {
 // 生成GetXXX(id) *XXX
 func (p *Coder) genGet(t reflect.Type) {
 	p.jfile.Func().Id("Get" + t.Name()).Params(jen.Id("id").Int64()).Id("*" + t.Name()).Block(
-		jen.Qual("fmt", "Println").Call(jen.Lit("Hello, world")),
+		jen.Return().Id("tbl" + t.Name()).Index(jen.Id("id")),
 	)
 }
 
 // 生成GetAllXXX() []*XXX
 func (p *Coder) genGetAll(t reflect.Type) {
 	p.jfile.Func().Id("GetAll" + t.Name()).Params().Index().Id("*" + t.Name()).Block(
-		jen.Qual("fmt", "Println").Call(jen.Lit("Hello, world")),
+		jen.Return().Id("tbl" + t.Name()),
 	)
 }
 
+// 输出
 func (p *Coder) Output(writeFile bool) {
 	if writeFile {
 		if err := p.jfile.Save(p.fileName); err != nil {

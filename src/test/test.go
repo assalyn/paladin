@@ -5,11 +5,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"frm/plog"
+	"paladin"
 	"reflect"
 )
 
+type Point struct {
+	X int
+	Y int
+}
+
+type XXX struct {
+	Value int
+	Point Point
+}
+
 func main() {
 	plog.InitLog("test.log", plog.LOG_TRACE)
+
+	/*fields := make([]reflect.StructField, 2)
+	fields[0].Name = "AAA"
+	fields[0].Type = reflect.TypeOf(int(0))
+	fields[1].Name = "BBB"
+	fields[1].Type = reflect.TypeOf("")
+	t := reflect.StructOf(fields)*/
+
+	coder := paladin.NewCodeBuilder("aaa")
+	coder.DebugType(reflect.TypeOf(&XXX{}), "Aaa")
 }
 
 func TestCamelName() {
