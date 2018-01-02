@@ -42,7 +42,7 @@ func main() {
 	var x interface{} = &AAA{}
 	c := NewCoder("equip")
 	c.GenStruct(x)
-	c.Output(true)
+	c.Output(false)
 }
 
 type Coder struct {

@@ -58,19 +58,27 @@ func (p *CodeBuilder) genType(t reflect.Type, structName string, printPrefix str
 	fmt.Printf("%s[gen type %s]\n", printPrefix, t.Name())
 	fields := make([]jen.Code, t.NumField())
 	for i := 0; i < t.NumField(); i++ {
-		fmt.Printf("%sfield %d %s %s\n", printPrefix, i, t.Field(i).Name, t.Field(i).Type.Kind().String())
-		switch t.Field(i).Type.Kind() {
+		subField := t.Field(i)
+		fmt.Printf("%sfield %d %s %s\n", printPrefix+"  ", i, t.Field(i).Name, t.Field(i).Type.Kind().String())
+		switch subField.Type.Kind() {
 		case reflect.Struct:
-			p.genType(t.Field(i).Type, t.Field(i).Name, "  ")
-			fields[i] = jen.Id(t.Field(i).Name).Id(t.Field(i).Name)
+			subStruct := structName + subField.Name
+			p.genType(subField.Type, subStruct, printPrefix+"  ")
+			fields[i] = jen.Id(subField.Name).Id(subStruct)
 
 		case reflect.Map:
+			mapSubStruct := structName + subField.Name + "Elem"
+			p.genType(subField.Type.Elem(), mapSubStruct, printPrefix+"  ")
+			fields[i] = jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())).Id(mapSubStruct)
 
 		case reflect.Slice:
+			sliceSubStruct := structName + subField.Name + "Elem"
+			p.genType(subField.Type.Elem(), sliceSubStruct, printPrefix+"  ")
+			fields[i] = jen.Id(subField.Name).Index().Id(sliceSubStruct)
 
 		default:
 			// 基础类型
-			fields[i] = p.AppendKeyword(jen.Id(t.Field(i).Name), t.Field(i).Type)
+			fields[i] = p.AppendKeyword(jen.Id(subField.Name), subField.Type)
 		}
 	}
 	if structName == "" {
@@ -116,8 +124,8 @@ func (p *CodeBuilder) genInit() {
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to open!!"), jen.Id("err"))),
 			jen.Return(),
 		),
-		jen.Id("decoder").Op(":=").Qual("json", "NewDecoder").Call(jen.Lit("file")),
-		jen.Id("err").Op("=").Qual("decoder", "Decode").Call(jen.Lit("&tbl"+p.structName)),
+		jen.Id("decoder").Op(":=").Qual("json", "NewDecoder").Call(jen.Id("file")),
+		jen.Id("err").Op("=").Qual("decoder", "Decode").Call(jen.Id("&tbl"+p.structName)),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to decode!!"), jen.Id("err"))),
 			jen.Return(),
@@ -180,16 +188,6 @@ func (p *CodeBuilder) AppendKeyword(code *jen.Statement, t reflect.Type) *jen.St
 
 	case reflect.String:
 		return code.String()
-
-	case reflect.Struct:
-		plog.Error("struct not run here")
-		return nil
-
-	case reflect.Map:
-		return p.AppendKeyword(code.Map(p.TypeToJenStatement(t.Key())), t.Elem())
-
-	case reflect.Slice:
-		return p.AppendKeyword(code.Index(), t.Elem())
 
 	default:
 		plog.Panic("not support type", t)

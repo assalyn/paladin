@@ -268,11 +268,16 @@ func (p *Parser) createStruct(rows [][]string) map[int]interface{} {
 		return data
 	}
 	builder := NewStructBuilder(rows[:conf.Cfg.IgnoreLine])
+	builder.BuildStruct()
 	for rowIdx, row := range rows {
 		if rowIdx < conf.Cfg.IgnoreLine {
 			continue
 		}
-		id, value := builder.CreateInstance(rowIdx, row)
+		id, value, err := builder.CreateInstance(row)
+		if err != nil {
+			plog.Errorf("解析第%d行数据失败，错误%v\n", rowIdx, err)
+			continue
+		}
 		data[id] = value
 	}
 	return data
@@ -304,4 +309,22 @@ func (p *Parser) mergeMap(origin map[int]interface{}, addMap map[int]interface{}
 		}
 		origin[id] = value
 	}
+}
+
+// 生成golang桩文件
+func (p *Parser) genGolangStub(dir string) {
+	plog.Trace()
+	for fileName, data := range p.Output {
+		for _, v := range data {
+			c := NewCodeBuilder(fileName)
+			c.GenStructWithName(v, fileName)
+			c.Output(dir)
+			break
+		}
+	}
+}
+
+// 生成C#桩文件
+func (p *Parser) genCsharpStub(dir string) {
+	plog.Trace()
 }

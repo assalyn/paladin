@@ -18,6 +18,8 @@ import (
 )
 
 func main() {
+	plog.InitLog("test_code.log", plog.LOG_TRACE)
+
 	// 读取数据
 	data := readStruct()
 	builder := NewTestBuilder(data[:4])
@@ -55,6 +57,8 @@ type TestBuilder struct {
 	layerDesc  []string // 层级描述 rows[3]
 	rows       [][]string
 	StructType reflect.Type
+
+	prevLayerDesc string
 }
 
 func NewTestBuilder(rows [][]string) *TestBuilder {
@@ -75,16 +79,16 @@ func (p *TestBuilder) BuildStruct() {
 			fmt.Println("错误的数据结构", err)
 			return
 		}
-		// 空数据结构，退出
+		// 空数据结构，略过，可能是重复结构
 		if field.Name == "" {
-			break
+			continue
 		}
 		fields = append(fields, field)
 	}
 	p.StructType = reflect.StructOf(fields)
 }
 
-// 先不考虑map
+// [XXX]数组结构; {XXX}map结构; XXX内部数据结构
 func (p *TestBuilder) parseField(column *int) (field reflect.StructField, err error) {
 	currDesc := p.layerDesc[*column]
 	if currDesc == "" {
@@ -96,17 +100,22 @@ func (p *TestBuilder) parseField(column *int) (field reflect.StructField, err er
 		return
 	}
 
-	i := *column
-	for ; i < len(p.layerDesc); i++ {
-		if p.layerDesc[i] != currDesc {
+	// 同一个结构要留下来
+	sentry := *column
+	for ; sentry < len(p.layerDesc); sentry++ {
+		if strings.Contains(p.layerDesc[sentry], currDesc) == false {
 			break
 		}
 	}
 
-	// 将连续的一组都选出来
-	layers := strings.Split(currDesc, ".")
-	// [XXX]数组结构; {XXX}map结构; XXX内部数据结构
-	subName, subType := p.layerType(layers[0])
+	// 将连续的一组都选出来. 以currDesc为基准进行解析
+	subName, subType := p.layerType(currDesc)
+	// 如果一样，说明是同一实例
+	if subName == p.prevLayerDesc {
+		*column = sentry
+		return
+	}
+	// 如果是prevLayerDesc.yyy, 说明存在继承关系
 	switch subType {
 	case "member":
 		// 子成员
@@ -115,12 +124,11 @@ func (p *TestBuilder) parseField(column *int) (field reflect.StructField, err er
 			Name: cmn.CamelName(p.rows[1][*column]),
 		}
 		*column++
-		return
 
 	case "struct":
 		// 子struct类型, struct结束时创建数据结构
 		var fs []reflect.StructField
-		for j := *column; j < i; j++ {
+		for j := *column; j < sentry; j++ {
 			fs = append(fs, reflect.StructField{
 				Type: p.memberType(p.rows[0][j]),
 				Name: cmn.CamelName(p.rows[1][j]),
@@ -131,29 +139,48 @@ func (p *TestBuilder) parseField(column *int) (field reflect.StructField, err er
 			Type: subStruct,
 			Name: cmn.CamelName(subName),
 		}
-		*column = i
-		return
+		*column = sentry
 
 	case "slice":
 		// 记录这个slice类型, 结束时创建数据结构. 并赋值给上级数据结构. 要用递归结构
-		for j := *column; j < i; j++ {
-
+		var fs []reflect.StructField
+		for j := *column; j < sentry; j++ {
+			fs = append(fs, reflect.StructField{
+				Type: p.memberType(p.rows[0][j]),
+				Name: cmn.CamelName(p.rows[1][j]),
+			})
 		}
-		subStruct := reflect.StructOf()
+		subStruct := reflect.StructOf(fs)
 		sliceStruct := reflect.SliceOf(subStruct)
 		field = reflect.StructField{
 			Type: sliceStruct,
 			Name: cmn.CamelName(subName),
 		}
-		*column = i
-		return
+		*column = sentry
 
 	case "map":
 		// 记录这个map类型, 结束时创建数据结构
+		var fs []reflect.StructField
+		for j := *column; j < sentry; j++ {
+			fs = append(fs, reflect.StructField{
+				Type: p.memberType(p.rows[0][j]),
+				Name: cmn.CamelName(p.rows[1][j]),
+			})
+		}
+		subStruct := reflect.StructOf(fs)
+		sliceStruct := reflect.MapOf(fs[0].Type, subStruct)
+		field = reflect.StructField{
+			Type: sliceStruct,
+			Name: cmn.CamelName(subName),
+		}
+		*column = sentry
 
 	default:
 		fmt.Println("错误的依赖类型", currDesc)
+		return
 	}
+
+	p.prevLayerDesc = subName
 	return
 }
 
@@ -184,16 +211,20 @@ func (p *TestBuilder) CreateInstance() {
 
 // 通过layer描述获取数据结构
 func (p *TestBuilder) layerType(layerDesc string) (subName string, subType string) {
-	if layerDesc == "" {
+	// 过滤掉#后面的部分
+	rex, _ := regexp.Compile("#.*$")
+	cleanStr := rex.ReplaceAllString(layerDesc, "")
+
+	if cleanStr == "" {
 		return "", "member"
-	} else if layerDesc[0] == '[' && layerDesc[len(layerDesc)-1] == ']' {
-		return layerDesc[1 : len(layerDesc)-2], "slice"
-	} else if layerDesc[0] == '{' && layerDesc[len(layerDesc)-1] == '}' {
-		return layerDesc[1 : len(layerDesc)-2], "map"
+	} else if cleanStr[0] == '[' && cleanStr[len(cleanStr)-1] == ']' {
+		return cleanStr[1 : len(cleanStr)-1], "slice"
+	} else if cleanStr[0] == '{' && cleanStr[len(cleanStr)-1] == '}' {
+		return cleanStr[1 : len(cleanStr)-1], "map"
 	}
-	matched, _ := regexp.Match("[a-zA-Z0-9_]*", []byte(layerDesc))
+	matched, _ := regexp.Match("[a-zA-Z0-9_.]*", []byte(cleanStr))
 	if matched {
-		return layerDesc, "struct"
+		return cleanStr, "struct"
 	} else {
 		return "", "invalid"
 	}

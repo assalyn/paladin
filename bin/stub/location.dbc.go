@@ -9,15 +9,25 @@ import (
 	os "os"
 )
 
+type LocationPoint struct {
+	X int
+	Y int
+}
+type LocationRateElem struct {
+	Rate    int
+	Comment int
+}
+type LocationSpellElem struct {
+	SpellId      int
+	SpellDamage  int
+	SpellComment int
+}
 type Location struct {
-	Id           int
-	Name         string
-	X            int
-	Y            int
-	Rate1        int
-	Rate2        int
-	SpellId1     int
-	SpellDamage1 int
+	Id    int
+	Name  string
+	Point LocationPoint
+	Rate  []LocationRateElem
+	Spell map[int]LocationSpellElem
 }
 
 var tblLocation map[int64]*Location
@@ -34,8 +44,8 @@ func init() {
 		fmt.Println("fail to open!!", err)
 		return
 	}
-	decoder := json.NewDecoder("file")
-	err = decoder.Decode("&tblLocation")
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&tblLocation)
 	if err != nil {
 		fmt.Println("fail to decode!!", err)
 		return

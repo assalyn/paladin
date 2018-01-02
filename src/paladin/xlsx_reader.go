@@ -4,7 +4,7 @@ import (
 	"conf"
 	"frm/plog"
 
-	"github.com/360EntSecGroup-Skylar/excelize"
+	"github.com/tealeg/xlsx"
 )
 
 // xlsx相关操作
@@ -34,7 +34,7 @@ func NewXlsxReader(autoId bool, horizontal bool) *XlsxReader {
 
 // 读取数据
 func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumItem) (*XlsxInfo, error) {
-	xlsx, err := excelize.OpenFile(xlsxFile)
+	xlFile, err := xlsx.OpenFile(xlsxFile)
 	if err != nil {
 		plog.Errorf("fail to read %s!! %v\n", xlsxFile, err)
 		return nil, err
@@ -42,10 +42,16 @@ func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumIt
 
 	info := NewXlsxInfo()
 	info.TableName = tableName
-	//plog.Info(tableName, "读取", xlsxFile, " 子表", xlsx.GetSheetMap())
-	for _, name := range xlsx.GetSheetMap() {
-		info.Rows[name] = xlsx.GetRows(name)
-	}
 	info.Enums = enums
+	for _, sheet := range xlFile.Sheets {
+		l := make([][]string, len(sheet.Rows))
+		for rowIdx, row := range sheet.Rows {
+			l[rowIdx] = make([]string, len(row.Cells))
+			for column, cell := range row.Cells {
+				l[rowIdx][column] = cell.Value
+			}
+		}
+		info.Rows[sheet.Name] = l
+	}
 	return info, nil
 }

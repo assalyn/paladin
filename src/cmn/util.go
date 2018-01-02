@@ -10,8 +10,10 @@ func CamelName(textStr string) string {
 	if len(textStr) == 0 {
 		return ""
 	}
-	text := []byte(textStr)
 
+	// 过滤掉#
+	rex, _ := regexp.Compile("#.*$")
+	text := []byte(rex.ReplaceAllString(textStr, ""))
 	// 字符集校验
 	match, _ := regexp.Match("^[a-zA-Z][a-zA-Z0-9_]*$", text)
 	if match == false {
