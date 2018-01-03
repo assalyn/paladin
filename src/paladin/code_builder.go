@@ -55,11 +55,11 @@ func (p *CodeBuilder) GenType(t reflect.Type, structName string) {
 }
 
 func (p *CodeBuilder) genType(t reflect.Type, structName string, printPrefix string) {
-	fmt.Printf("%s[gen type %s]\n", printPrefix, t.Name())
+	//fmt.Printf("%s[gen type %s]\n", printPrefix, t.Name())
 	fields := make([]jen.Code, t.NumField())
 	for i := 0; i < t.NumField(); i++ {
 		subField := t.Field(i)
-		fmt.Printf("%sfield %d %s %s\n", printPrefix+"  ", i, t.Field(i).Name, t.Field(i).Type.Kind().String())
+		//fmt.Printf("%sfield %d %s %s\n", printPrefix+"  ", i, t.Field(i).Name, t.Field(i).Type.Kind().String())
 		switch subField.Type.Kind() {
 		case reflect.Struct:
 			subStruct := structName + subField.Name

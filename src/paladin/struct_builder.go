@@ -73,7 +73,6 @@ func (p *StructBuilder) CreateInstance(row []string) (id int, value interface{},
 	elem := structValue.Elem() // 这是对象
 	reader := NewRowReader(p.rows[:4], row)
 	for i := 0; i < elem.NumField(); i++ {
-		fmt.Println(elem.Field(i).String(), "name=", p.StructType.Field(i).Name)
 		value, err := reader.ReadField(p.StructType.Field(i).Name, p.StructType.Field(i).Type, elem.Field(i))
 		if err != nil {
 			plog.Error("fail to assign field!!", err)

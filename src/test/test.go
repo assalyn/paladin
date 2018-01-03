@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"frm/plog"
-	"paladin"
 	"reflect"
+	"regexp"
 )
 
 type Point struct {
@@ -22,6 +22,7 @@ type XXX struct {
 func main() {
 	plog.InitLog("test.log", plog.LOG_TRACE)
 
+	fmt.Println(regexp.Match("(?i:^\\[Rate\\])", []byte("[rate]#1")))
 	/*fields := make([]reflect.StructField, 2)
 	fields[0].Name = "AAA"
 	fields[0].Type = reflect.TypeOf(int(0))
@@ -29,8 +30,8 @@ func main() {
 	fields[1].Type = reflect.TypeOf("")
 	t := reflect.StructOf(fields)*/
 
-	coder := paladin.NewCodeBuilder("aaa")
-	coder.DebugType(reflect.TypeOf(&XXX{}), "Aaa")
+	//coder := paladin.NewCodeBuilder("aaa")
+	//coder.DebugType(reflect.TypeOf(&XXX{}), "Aaa")
 }
 
 func TestCamelName() {

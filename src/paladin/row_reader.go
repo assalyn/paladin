@@ -39,20 +39,19 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 		// 获取一簇一簇的数据，然后一个个赋值
 		value = reflect.MakeMap(t)
 		for {
-			_, elemValue, err := p.readMapValue(fieldName, t.Elem())
+			key, elemValue, err := p.readMapValue(fieldName, t.Elem())
 			if err != nil && err != cmn.ErrEOF {
 				plog.Error("读取数据错误", err)
 				return value, err
 			}
-			value.SetMapIndex(elemValue.Field(0), elemValue)
 			if err == cmn.ErrEOF {
 				break
 			}
+			value.SetMapIndex(key, elemValue)
 		}
 		return value, nil
 
 	case reflect.Slice:
-		//fmt.Println("type=", elemType.String(), "value=", field.String())
 		var elemArray []reflect.Value
 		for {
 			elemValue, err := p.readSliceValue(fieldName, t.Elem())
@@ -65,10 +64,10 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 			}
 			elemArray = append(elemArray, elemValue)
 		}
-		value = reflect.MakeSlice(t, len(elemArray), len(elemArray))
 		if len(elemArray) > 0 {
+			value = reflect.MakeSlice(t, len(elemArray), len(elemArray))
 			for i := 0; i < len(elemArray); i++ {
-				reflect.Append(value, elemArray[i])
+				value.Index(i).Set(elemArray[i])
 			}
 		}
 		return value, nil
@@ -83,7 +82,7 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 	value := reflect.New(elemType).Elem()
 	for i := 0; i < value.NumField(); i++ {
 		// 读不出来了
-		if p.matchDictDesc(p.desc[p.col], sliceName) == false {
+		if p.matchSliceDesc(sliceName) == false {
 			return value, cmn.ErrEOF
 		}
 		p.assignMember(value.Field(i))
@@ -91,16 +90,18 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 	return value, nil
 }
 
-func (p *RowReader) readMapValue(sliceName string, elemType reflect.Type) (key reflect.Value, value reflect.Value, err error) {
+func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key reflect.Value, value reflect.Value, err error) {
 	value = reflect.New(elemType).Elem()
+	fmt.Println("numfield=", value.NumField())
 	for i := 0; i < value.NumField(); i++ {
 		// 读不出来了
-		if p.matchDictDesc(p.desc[p.col], sliceName) == false {
+		if p.matchMapDesc(mapName) == false {
 			return key, value, cmn.ErrEOF
 		}
 		p.assignMember(value.Field(i))
 	}
-	return key, value, nil
+	showStruct(value)
+	return value.Field(0), value, nil
 }
 
 // 给member成员赋值
@@ -154,7 +155,19 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 }
 
 // 是否匹配 [rate]#xxx 或
-func (p *RowReader) matchDictDesc(desc string, dictName string) bool {
-	matched, _ := regexp.Match(fmt.Sprintf("^[%s]", dictName), []byte(desc))
+func (p *RowReader) matchSliceDesc(dictName string) bool {
+	if p.col >= len(p.row) {
+		return false
+	}
+	matched, _ := regexp.Match(fmt.Sprintf("(?i:^\\[%s\\])", dictName), []byte(p.desc[p.col]))
+	return matched
+}
+
+// 是否匹配 {rate}#xxx 或
+func (p *RowReader) matchMapDesc(dictName string) bool {
+	if p.col >= len(p.row) {
+		return false
+	}
+	matched, _ := regexp.Match(fmt.Sprintf("(?i:^\\{%s\\})", dictName), []byte(p.desc[p.col]))
 	return matched
 }
