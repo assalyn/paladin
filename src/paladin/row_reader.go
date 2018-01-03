@@ -92,7 +92,6 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 
 func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key reflect.Value, value reflect.Value, err error) {
 	value = reflect.New(elemType).Elem()
-	fmt.Println("numfield=", value.NumField())
 	for i := 0; i < value.NumField(); i++ {
 		// 读不出来了
 		if p.matchMapDesc(mapName) == false {
@@ -100,7 +99,6 @@ func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key ref
 		}
 		p.assignMember(value.Field(i))
 	}
-	showStruct(value)
 	return value.Field(0), value, nil
 }
 

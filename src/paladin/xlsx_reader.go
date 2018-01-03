@@ -44,14 +44,31 @@ func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumIt
 	info.TableName = tableName
 	info.Enums = enums
 	for _, sheet := range xlFile.Sheets {
-		l := make([][]string, len(sheet.Rows))
-		for rowIdx, row := range sheet.Rows {
-			l[rowIdx] = make([]string, len(row.Cells))
-			for column, cell := range row.Cells {
-				l[rowIdx][column] = cell.Value
+		if p.Horizontal {
+			if len(sheet.Rows) == 0 {
+				// 没有数据, 直接返回
+				continue
 			}
+			l := make([][]string, len(sheet.Rows[0].Cells))
+			for col := 0; col < len(sheet.Rows[0].Cells); col++ {
+				l[col] = make([]string, len(sheet.Rows))
+			}
+			for rowIdx, row := range sheet.Rows {
+				for column, cell := range row.Cells {
+					l[column][rowIdx] = cell.Value
+				}
+			}
+			info.Rows[sheet.Name] = l
+		} else {
+			l := make([][]string, len(sheet.Rows))
+			for rowIdx, row := range sheet.Rows {
+				l[rowIdx] = make([]string, len(row.Cells))
+				for column, cell := range row.Cells {
+					l[rowIdx][column] = cell.Value
+				}
+			}
+			info.Rows[sheet.Name] = l
 		}
-		info.Rows[sheet.Name] = l
 	}
 	return info, nil
 }
