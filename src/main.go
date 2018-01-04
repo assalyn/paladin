@@ -28,12 +28,17 @@ func main() {
 		cli.StringFlag{
 			Name:  "output,o",
 			Usage: "output directory",
-			Value: "dbc",
+			Value: "data",
 		},
 		cli.StringFlag{
-			Name:  "stub,sd",
-			Usage: "generated stub code directory",
+			Name:  "stub,s",
+			Usage: "generated stub code files directory",
 			Value: "stub",
+		},
+		cli.StringFlag{
+			Name:  "locale,l",
+			Usage: "generated locale files directory",
+			Value: "locale",
 		},
 		cli.BoolFlag{
 			Name:  "golang,go",
@@ -58,10 +63,8 @@ func actualMain(c *cli.Context) error {
 	// 加载log
 	plog.InitLog("app.log", plog.LOG_TRACE)
 
-	// 必要的参数格式化
-
 	// 启动解析器
-	parser := paladin.NewParser(c.String("output"), c.Bool("golang"), c.Bool("csharp"))
+	parser := paladin.NewParser(c.String("output"), c.String("stub"), c.String("locale"), c.Bool("golang"), c.Bool("csharp"))
 	parser.Start()
 	return nil
 }

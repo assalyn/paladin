@@ -22,12 +22,14 @@ type Parser struct {
 	Output          map[string]map[int]interface{}          // 待输出的数据 字表->id->内容
 
 	// 内部使用变量
-	outputDir string
-	genGolang bool
-	genCsharp bool
+	outputDir string // 输出目录
+	stubDir   string // 桩代码目录
+	localeDir string // 多语言目录
+	genGolang bool   // 是否生成golang桩代码
+	genCsharp bool   // 是否生成csharp桩代码
 }
 
-func NewParser(outputDir string, genGolang bool, genCsharp bool) *Parser {
+func NewParser(outputDir string, stubDir string, localeDir string, genGolang bool, genCsharp bool) *Parser {
 	p := new(Parser)
 	p.Xlsx = make(map[string]*XlsxInfo)
 
@@ -37,6 +39,8 @@ func NewParser(outputDir string, genGolang bool, genCsharp bool) *Parser {
 	p.Output = make(map[string]map[int]interface{})
 
 	p.outputDir = outputDir
+	p.stubDir = stubDir
+	p.localeDir = localeDir
 	p.genGolang = genGolang
 	p.genCsharp = genCsharp
 	return p
@@ -128,18 +132,18 @@ func (p *Parser) output(fmt string) {
 
 func (p *Parser) outputLocale() {
 	// 校验localeDir是否存在
-	if err := os.MkdirAll(p.outputDir+"/locale", 0777); err != nil {
-		plog.Errorf("创建目录%v失败%v\n", p.outputDir, err)
+	if err := os.MkdirAll(p.localeDir, 0777); err != nil {
+		plog.Errorf("创建目录%v失败%v\n", p.localeDir, err)
 		return
 	}
 	// 导出locale文件
 	for tableName, localeSwapDict := range p.LocaleSwapDict {
 		for locale, swapTable := range localeSwapDict {
-			if err := os.MkdirAll(p.outputDir+"/locale/"+locale, 0777); err != nil {
-				plog.Errorf("创建多语言目录%v失败\n", p.outputDir+"/"+locale)
+			if err := os.MkdirAll(p.localeDir+"/"+locale, 0777); err != nil {
+				plog.Errorf("创建多语言目录%v失败\n", p.localeDir)
 				continue
 			}
-			localeFile, err := os.Create(p.outputDir + "/locale/" + locale + "/" + tableName + ".json")
+			localeFile, err := os.Create(p.localeDir + "/" + locale + "/" + tableName + ".json")
 			if err != nil {
 				plog.Error(tableName, "生成多语言文件失败", err)
 				continue
@@ -155,17 +159,19 @@ func (p *Parser) outputLocale() {
 
 // 生成桩文件
 func (p *Parser) genStubCode() {
-	stubDir := "stub"
-	// 校验dbc是否存在
-	if err := os.MkdirAll(stubDir, 0777); err != nil {
-		plog.Errorf("创建目录%v失败%v\n", stubDir, err)
-		return
-	}
 	if p.genGolang {
-		p.genGolangStub(stubDir)
+		if err := os.MkdirAll(p.stubDir, 0777); err != nil {
+			plog.Errorf("创建目录%v失败%v\n", p.stubDir, err)
+			return
+		}
+		p.genGolangStub(p.stubDir)
 	}
 	if p.genCsharp {
-		p.genCsharpStub(stubDir)
+		if err := os.MkdirAll(p.stubDir, 0777); err != nil {
+			plog.Errorf("创建目录%v失败%v\n", p.stubDir, err)
+			return
+		}
+		p.genCsharpStub(p.stubDir)
 	}
 }
 
@@ -316,9 +322,9 @@ func (p *Parser) genGolangStub(dir string) {
 	plog.Trace()
 	for fileName, data := range p.Output {
 		for _, v := range data {
-			c := NewCodeBuilder(fileName)
+			c := NewCodeBuilder(p.stubDir, p.outputDir, fileName)
 			c.GenStructWithName(v, fileName)
-			c.Output(dir)
+			c.Output()
 			break
 		}
 	}
