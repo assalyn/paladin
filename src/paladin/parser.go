@@ -187,10 +187,12 @@ func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 		// 枚举替换
 		if err := p.swapEnum(rows, xlsxConf.Enums); err != nil {
 			plog.Error(tableName, "替换枚举出错", err)
+			return
 		}
 		// 参数展开
 		if err := p.expandParam(rows); err != nil {
 			plog.Error(tableName, "参数展开出错", err)
+			return
 		}
 		// ...其他展开
 
@@ -206,20 +208,27 @@ func (p *Parser) swapEnum(origin [][]string, enumItems []conf.EnumItem) error {
 	for _, enumItem := range enumItems {
 		if enumItem.Table == "enum" {
 			// 枚举表替换
-			swapTable := p.EnumSwapDict[enumItem.Table]
+			swapTable := p.EnumSwapDict[enumItem.Sheet]
 			if swapTable == nil {
-				plog.Error("枚举替换表不存在!!", enumItem.Table)
+				plog.Errorf("枚举替换子表%v不存在!!\n", enumItem.Sheet)
 				return cmn.ErrNotExist
 			}
-			p.swapEnumField(origin, enumItem.Field, swapTable)
+			if err := p.swapEnumField(origin, enumItem.Field, swapTable); err != nil {
+				return err
+			}
 		} else {
-			// 其他表单替换
-			xlsxInfo := p.Xlsx[enumItem.Table]
-			if xlsxInfo == nil || xlsxInfo.NameDict == nil {
-				plog.Errorf("xlsx表%v不存在!!不存在name->id键值对!!\n", enumItem.Table)
-				return cmn.ErrNotExist
+			tokens := strings.Split(enumItem.Table, ",")
+			for _, table := range tokens {
+				// 其他表单替换
+				xlsxInfo := p.Xlsx[table]
+				if xlsxInfo == nil || xlsxInfo.NameDict == nil {
+					plog.Errorf("xlsx表%v不存在!!不存在name->id键值对!!\n", table)
+					return cmn.ErrNotExist
+				}
+				if err := p.swapEnumField(origin, enumItem.Field, xlsxInfo.NameDict); err != nil {
+					return err
+				}
 			}
-			p.swapEnumField(origin, enumItem.Field, xlsxInfo.NameDict)
 		}
 	}
 	return nil
@@ -227,27 +236,33 @@ func (p *Parser) swapEnum(origin [][]string, enumItems []conf.EnumItem) error {
 
 // 替换枚举列，把数据的field列内容进行替换
 func (p *Parser) swapEnumField(origin [][]string, field string, swapTable map[string]string) error {
+	var ok bool
 	var err error = nil
+	var newValue string
 
 	column := 0
 	for ; column < len(origin[0]); column++ {
-		if origin[1][column] == field {
-			break
-		}
-	}
-	// column就是要找的列
-	for rowIdx := 0; rowIdx < len(origin); rowIdx++ {
-		// 前ignoreLine行是结构，不替换
-		if rowIdx < conf.Cfg.IgnoreLine {
+		if origin[1][column] != field {
 			continue
 		}
-		newValue, ok := swapTable[origin[rowIdx][column]]
-		if ok == false {
-			plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
-			err = cmn.ErrFail
-			continue
+
+		for rowIdx := 0; rowIdx < len(origin); rowIdx++ {
+			// 前ignoreLine行是结构，不替换
+			if rowIdx < conf.Cfg.IgnoreLine {
+				continue
+			}
+			if origin[rowIdx][column] == "NULL" {
+				newValue = "NULL"
+			} else {
+				newValue, ok = swapTable[origin[rowIdx][column]]
+				if ok == false {
+					plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
+					err = cmn.ErrFail
+					continue
+				}
+			}
+			origin[rowIdx][column] = newValue
 		}
-		origin[rowIdx][column] = newValue
 	}
 	return err
 }

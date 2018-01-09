@@ -6,7 +6,7 @@ import (
 
 	"strconv"
 
-	"github.com/tealeg/xlsx"
+	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
 // xlsx相关操作
@@ -37,7 +37,8 @@ func NewXlsxReader(autoId bool, horizontal bool) *XlsxReader {
 
 // 读取数据
 func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumItem) (*XlsxInfo, error) {
-	xlFile, err := xlsx.OpenFile(xlsxFile)
+	//xlFile, err := xlsx.OpenFile(xlsxFile)
+	xlsx, err := excelize.OpenFile(xlsxFile)
 	if err != nil {
 		plog.Errorf("fail to read %s!! %v\n", xlsxFile, err)
 		return nil, err
@@ -46,36 +47,39 @@ func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumIt
 	info := NewXlsxInfo()
 	info.TableName = tableName
 	info.Enums = enums
-	for _, sheet := range xlFile.Sheets {
-		var rows [][]string
+	for _, sheet := range xlsx.GetSheetMap() {
+		var data [][]string
+		rows := xlsx.GetRows(sheet)
+		// 过滤数据rows，去掉全空
+		for i := conf.Cfg.IgnoreLine; i < len(rows); i++ {
+			if rows[i][0] == "" {
+				rows = rows[:i]
+				break
+			}
+		}
 		// 读取数据
 		if p.Horizontal {
-			if len(sheet.Rows) == 0 {
+			if len(rows) == 0 {
 				// 没有数据, 直接返回
 				continue
 			}
-			rows = make([][]string, len(sheet.Rows[0].Cells))
-			for col := 0; col < len(sheet.Rows[0].Cells); col++ {
-				rows[col] = make([]string, len(sheet.Rows))
+
+			data = make([][]string, len(rows[0]))
+			for col := 0; col < len(rows[0]); col++ {
+				data[col] = make([]string, len(rows))
 			}
-			for rowIdx, row := range sheet.Rows {
-				for column, cell := range row.Cells {
-					rows[column][rowIdx] = cell.Value
+			for rowIdx, row := range rows {
+				for column, value := range row {
+					data[column][rowIdx] = value
 				}
 			}
 		} else {
-			rows = make([][]string, len(sheet.Rows))
-			for rowIdx, row := range sheet.Rows {
-				rows[rowIdx] = make([]string, len(row.Cells))
-				for column, cell := range row.Cells {
-					rows[rowIdx][column] = cell.Value
-				}
-			}
+			data = rows
 		}
-		info.Rows[sheet.Name] = rows
+		info.Rows[sheet] = data
 
 		// 设置nameDict索引. 枚举表和多语言表不需要这种name->id键值对
-		if sheet.Name != "enum" && sheet.Name != "locale" {
+		if sheet != "enum" && sheet != "locale" {
 			nameCol := p.QueryColumn(rows, "name")
 			if nameCol == -1 {
 				continue // 不需要索引
@@ -84,11 +88,13 @@ func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumIt
 			if idCol == -1 {
 				continue // 不需要索引
 			}
-			info.NameDict = make(map[string]string)
+			if info.NameDict == nil {
+				info.NameDict = make(map[string]string)
+			}
 			for rowIdx := conf.Cfg.IgnoreLine; rowIdx < len(rows); rowIdx++ {
 				_, err := strconv.Atoi(rows[rowIdx][idCol])
 				if err != nil {
-					plog.Errorf("%s表%s子表[%d][%d]不正确的ID %v! 错误原因：%v\n", tableName, sheet.Name, rowIdx, idCol, rows[rowIdx][idCol], err)
+					plog.Errorf("%s表%s子表[%d][%d]不正确的ID %v! 错误原因：%v\n", tableName, sheet, rowIdx, idCol, rows[rowIdx][idCol], err)
 					continue
 				}
 				info.NameDict[rows[rowIdx][nameCol]] = rows[rowIdx][idCol]

@@ -24,17 +24,28 @@ ignoreLine = 4
 #    {field = "size", table = "尺寸"},
 #  ]
 
-  [tables.location]
-  workbook = "xlsx/位置表.xlsx"
+#  [tables.location]
+#  workbook = "xlsx/位置表.xlsx"
+#  horizontal = false
+#  enums = [
+#      {field = "shop_list", table = "市场表"},
+#      {field = "npc_id", table = "npc表"},
+#      {field = "star", table = "enum", sheet = "星级"},
+#  ]
+
+  [tables.shop]
+  workbook = "xlsx/市场表.xlsx"
   horizontal = false
   enums = [
-      {field = "class_1", table = "enum", sheet = "物品大类"},
-      {field = "class_2", table = "enum", sheet = "物品小类"},
-      {field = "size", table = "enum", sheet = "尺寸"},
+      {field = "sell_id", table = "fabao"},
+      {field = "buy_id", table = "fabao"},
   ]
 
+  [tables.fabao]
+  workbook = "xlsx/法宝表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "star", table = "enum", sheet = "星级"},
+      {field = "attr", table = "enum", sheet = "力量属性"},
+  ]
 
-
-  #locates = [
-  #  {field = "name", table = "描述"}
-  #]

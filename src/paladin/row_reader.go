@@ -64,11 +64,9 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 			}
 			elemArray = append(elemArray, elemValue)
 		}
-		if len(elemArray) > 0 {
-			value = reflect.MakeSlice(t, len(elemArray), len(elemArray))
-			for i := 0; i < len(elemArray); i++ {
-				value.Index(i).Set(elemArray[i])
-			}
+		value = reflect.MakeSlice(t, len(elemArray), len(elemArray))
+		for i := 0; i < len(elemArray); i++ {
+			value.Index(i).Set(elemArray[i])
 		}
 		return value, nil
 
@@ -80,6 +78,16 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 
 func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (reflect.Value, error) {
 	value := reflect.New(elemType).Elem()
+	allNull := true
+	for i := 0; i < value.NumField(); i++ {
+		if p.row[p.col+i] != "NULL" {
+			allNull = false
+		}
+	}
+	if allNull {
+		// 全部成员都为NULL时，代表这个slice没数据
+		return value, cmn.ErrEOF
+	}
 	for i := 0; i < value.NumField(); i++ {
 		// 读不出来了
 		if p.matchSliceDesc(sliceName) == false {
@@ -93,8 +101,13 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key reflect.Value, value reflect.Value, err error) {
 	value = reflect.New(elemType).Elem()
 	for i := 0; i < value.NumField(); i++ {
-		// 读不出来了
+		// 这个数据不是以前那个map结构了
 		if p.matchMapDesc(mapName) == false {
+			return key, value, cmn.ErrEOF
+		}
+		// 键值为NULL时过滤掉这条map数据
+		if i == 0 && p.row[p.col] == "NULL" {
+			p.col += value.NumField()
 			return key, value, cmn.ErrEOF
 		}
 		p.assignMember(value.Field(i))
@@ -125,7 +138,7 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 	case reflect.Int:
 		value, err := strconv.ParseInt(p.row[p.col], 10, 64)
 		if err != nil {
-			plog.Errorf("错误的INT数值%s, 第%d行第%d列\n", p.row[p.col], p.col)
+			plog.Errorf("错误的INT数值%s, 第%d列\n", p.row[p.col], p.col)
 			return
 		}
 		elem.SetInt(value)
@@ -133,7 +146,7 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 	case reflect.Uint:
 		value, err := strconv.ParseUint(p.row[p.col], 10, 64)
 		if err != nil {
-			plog.Errorf("错误的UINT数值%s, 第%d行第%d列\n", p.row[p.col], p.col)
+			plog.Errorf("错误的UINT数值%s, 第%d列\n", p.row[p.col], p.col)
 			return
 		}
 		elem.SetUint(value)
@@ -144,7 +157,7 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 	case reflect.Float64:
 		value, err := strconv.ParseFloat(p.row[p.col], 64)
 		if err != nil {
-			plog.Errorf("错误的float64数值%s, 第%d行第%d列\n", p.row[p.col], p.col)
+			plog.Errorf("错误的float64数值%s, 第%d列\n", p.row[p.col], p.col)
 			return
 		}
 		elem.SetFloat(value)

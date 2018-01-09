@@ -14,7 +14,7 @@ func (p *Parser) structEnumSwapMap() {
 			if rowIdx < 3 {
 				continue
 			}
-			if len(row) != 2 {
+			if len(row) < 2 {
 				plog.Errorf("枚举表异常，数据长度=%v 第%v行\n", len(row), rowIdx)
 				continue
 			}

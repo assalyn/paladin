@@ -88,7 +88,7 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 	currDesc := p.layerDesc[*column]
 	if currDesc == "" {
 		field = reflect.StructField{
-			Type: p.memberType(p.rows[0][*column]),
+			Type: p.memberType(0, *column),
 			Name: cmn.CamelName(p.rows[1][*column]),
 		}
 		*column++
@@ -115,7 +115,7 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 	case "member":
 		// 子成员
 		field = reflect.StructField{
-			Type: p.memberType(p.rows[0][*column]),
+			Type: p.memberType(0, *column),
 			Name: cmn.CamelName(p.rows[1][*column]),
 		}
 		*column++
@@ -125,7 +125,7 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 		var fs []reflect.StructField
 		for j := *column; j < sentry; j++ {
 			fs = append(fs, reflect.StructField{
-				Type: p.memberType(p.rows[0][j]),
+				Type: p.memberType(0, j),
 				Name: cmn.CamelName(p.rows[1][j]),
 			})
 		}
@@ -141,7 +141,7 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 		var fs []reflect.StructField
 		for j := *column; j < sentry; j++ {
 			fs = append(fs, reflect.StructField{
-				Type: p.memberType(p.rows[0][j]),
+				Type: p.memberType(0, j),
 				Name: cmn.CamelName(p.rows[1][j]),
 			})
 		}
@@ -158,7 +158,7 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 		var fs []reflect.StructField
 		for j := *column; j < sentry; j++ {
 			fs = append(fs, reflect.StructField{
-				Type: p.memberType(p.rows[0][j]),
+				Type: p.memberType(0, j),
 				Name: cmn.CamelName(p.rows[1][j]),
 			})
 		}
@@ -192,8 +192,8 @@ func (p *StructBuilder) getFieldCluster(startCol int) (endCol int) {
 }
 
 // 成员类型
-func (p *StructBuilder) memberType(typeName string) reflect.Type {
-	typeName = strings.ToUpper(typeName)
+func (p *StructBuilder) memberType(rowIdx int, column int) reflect.Type {
+	typeName := strings.ToUpper(p.rows[rowIdx][column])
 	switch typeName {
 	case "UINT":
 		return reflect.TypeOf(uint(0))
@@ -208,7 +208,7 @@ func (p *StructBuilder) memberType(typeName string) reflect.Type {
 		return reflect.TypeOf(float64(0))
 
 	default:
-		plog.Error("Unsupport type!", typeName)
+		plog.Errorf("Unsupport type!rows[%v][%v] = %v\n", rowIdx, column, typeName)
 		return reflect.TypeOf(int(0))
 	}
 }
