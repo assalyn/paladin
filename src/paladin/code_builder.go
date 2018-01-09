@@ -71,12 +71,12 @@ func (p *CodeBuilder) genType(t reflect.Type, structName string, printPrefix str
 			fields[i] = jen.Id(subField.Name).Id(subStruct)
 
 		case reflect.Map:
-			mapSubStruct := structName + subField.Name + "Elem"
+			mapSubStruct := structName + subField.Name
 			p.genType(subField.Type.Elem(), mapSubStruct, printPrefix+"  ")
 			fields[i] = jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())).Id(mapSubStruct)
 
 		case reflect.Slice:
-			sliceSubStruct := structName + subField.Name + "Elem"
+			sliceSubStruct := structName + subField.Name
 			p.genType(subField.Type.Elem(), sliceSubStruct, printPrefix+"  ")
 			fields[i] = jen.Id(subField.Name).Index().Id(sliceSubStruct)
 
