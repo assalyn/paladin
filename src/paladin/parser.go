@@ -203,14 +203,24 @@ func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 
 // 枚举替换
 func (p *Parser) swapEnum(origin [][]string, enumItems []conf.EnumItem) error {
-	// 要先初始化好enum表
 	for _, enumItem := range enumItems {
-		swapTable := p.EnumSwapDict[enumItem.Table]
-		if swapTable == nil {
-			plog.Error("枚举替换表不存在!!", enumItem.Table)
-			return cmn.ErrNotExist
+		if enumItem.Table == "enum" {
+			// 枚举表替换
+			swapTable := p.EnumSwapDict[enumItem.Table]
+			if swapTable == nil {
+				plog.Error("枚举替换表不存在!!", enumItem.Table)
+				return cmn.ErrNotExist
+			}
+			p.swapEnumField(origin, enumItem.Field, swapTable)
+		} else {
+			// 其他表单替换
+			xlsxInfo := p.Xlsx[enumItem.Table]
+			if xlsxInfo == nil || xlsxInfo.NameDict == nil {
+				plog.Errorf("xlsx表%v不存在!!不存在name->id键值对!!\n", enumItem.Table)
+				return cmn.ErrNotExist
+			}
+			p.swapEnumField(origin, enumItem.Field, xlsxInfo.NameDict)
 		}
-		p.swapEnumField(origin, enumItem.Field, swapTable)
 	}
 	return nil
 }

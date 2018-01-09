@@ -10,26 +10,30 @@ localeFile = "xlsx/多语言表.xlsx"
 ignoreLine = 4
 
 [tables]
-  [tables.equip]
-  workbook = "xlsx/装备表.xlsx"
-  autoId = true
-  horizontal = false
-  enums = [
-    {field = "class_1", table = "物品大类"},
-    {field = "class_2", table = "物品小类"},
-    {field = "size", table = "尺寸"},
-  ]
+  [tables.global]
+  workbook = "xlsx/全局配置表.xlsx"
+  horizontal = true
+
+#  [tables.fabao]
+#  workbook = "xlsx/法宝表.xlsx"
+#  autoId = true
+#  horizontal = false
+#  enums = [
+#    {field = "class_1", table = "物品大类"},
+#    {field = "class_2", table = "物品小类"},
+#    {field = "size", table = "尺寸"},
+#  ]
 
   [tables.location]
-    workbook = "xlsx/位置表.xlsx"
-    autoId = true
-    horizontal = false
+  workbook = "xlsx/位置表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "class_1", table = "enum", sheet = "物品大类"},
+      {field = "class_2", table = "enum", sheet = "物品小类"},
+      {field = "size", table = "enum", sheet = "尺寸"},
+  ]
 
-  [tables.global]
-       workbook = "xlsx/全局配置表.xlsx"
-       autoId = true
-       horizontal = true
-       singleton = true
+
 
   #locates = [
   #  {field = "name", table = "描述"}

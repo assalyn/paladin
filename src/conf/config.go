@@ -12,7 +12,8 @@ var Cfg *Config
 
 type EnumItem struct {
 	Field string
-	Table string
+	Table string // 表名
+	Sheet string // 子表
 }
 
 type LocaleItem struct {
