@@ -78,6 +78,9 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 
 func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (reflect.Value, error) {
 	value := reflect.New(elemType).Elem()
+	if p.col >= len(p.row) {
+		return value, cmn.ErrEOF
+	}
 	allNull := true
 	for i := 0; i < value.NumField(); i++ {
 		if p.row[p.col+i] != "NULL" {
