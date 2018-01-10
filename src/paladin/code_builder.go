@@ -129,7 +129,7 @@ func (p *CodeBuilder) genInit() {
 			jen.Return(),
 		),
 		jen.Id("decoder").Op(":=").Qual("encoding/json", "NewDecoder").Call(jen.Id("file")),
-		jen.Id("err").Op("=").Qual("decoder", "Decode").Call(jen.Id("&tbl"+p.structName)),
+		jen.Id("err").Op("=").Id("decoder").Dot("Decode").Call(jen.Id("&tbl"+p.structName)),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to decode!!"), jen.Id("err"))),
 			jen.Return(),
