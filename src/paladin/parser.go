@@ -218,6 +218,7 @@ func (p *Parser) swapEnum(origin [][]string, enumItems []conf.EnumItem) error {
 			}
 		} else {
 			tokens := strings.Split(enumItem.Table, ",")
+			swapTableList := make([]map[string]string, 0, len(tokens))
 			for _, table := range tokens {
 				// 其他表单替换
 				xlsxInfo := p.Xlsx[table]
@@ -225,9 +226,10 @@ func (p *Parser) swapEnum(origin [][]string, enumItems []conf.EnumItem) error {
 					plog.Errorf("xlsx表%v不存在!!不存在name->id键值对!!\n", table)
 					return cmn.ErrNotExist
 				}
-				if err := p.swapEnumField(origin, enumItem.Field, xlsxInfo.NameDict); err != nil {
-					return err
-				}
+				swapTableList = append(swapTableList, xlsxInfo.NameDict)
+			}
+			if err := p.swapEnumFieldMultiTable(origin, enumItem.Field, swapTableList); err != nil {
+				return err
 			}
 		}
 	}
@@ -262,6 +264,46 @@ func (p *Parser) swapEnumField(origin [][]string, field string, swapTable map[st
 				}
 			}
 			origin[rowIdx][column] = newValue
+		}
+	}
+	return err
+}
+
+// todo 这里是不是性能有点问题
+func (p *Parser) swapEnumFieldMultiTable(origin [][]string, field string, swapTableList []map[string]string) error {
+	var ok bool
+	var err error = nil
+	var newValue string
+
+	column := 0
+	for ; column < len(origin[0]); column++ {
+		if origin[1][column] != field {
+			continue
+		}
+
+		for rowIdx := 0; rowIdx < len(origin); rowIdx++ {
+			// 前ignoreLine行是结构，不替换
+			if rowIdx < conf.Cfg.IgnoreLine {
+				continue
+			}
+			if origin[rowIdx][column] == "NULL" {
+				newValue = "NULL"
+			} else {
+				found := false
+				for _, swapTable := range swapTableList {
+					newValue, ok = swapTable[origin[rowIdx][column]]
+					if ok {
+						found = true
+						origin[rowIdx][column] = newValue
+						break
+					}
+				}
+				if found == false {
+					plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
+					err = cmn.ErrFail
+					continue
+				}
+			}
 		}
 	}
 	return err

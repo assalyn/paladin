@@ -6,5 +6,8 @@
 gin-bin.*
 /bin/*.exe
 /bin/*_server
+/bin/locale
+/bin/stub
+/bin/data
 /pkg
 /.idea

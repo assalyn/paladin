@@ -14,24 +14,29 @@ ignoreLine = 4
   workbook = "xlsx/全局配置表.xlsx"
   horizontal = true
 
-#  [tables.fabao]
-#  workbook = "xlsx/法宝表.xlsx"
-#  autoId = true
-#  horizontal = false
-#  enums = [
-#    {field = "class_1", table = "物品大类"},
-#    {field = "class_2", table = "物品小类"},
-#    {field = "size", table = "尺寸"},
-#  ]
+  [tables.npc]
+  workbook = "xlsx/npc表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "task_id", table = "task"},
+  ]
 
-#  [tables.location]
-#  workbook = "xlsx/位置表.xlsx"
-#  horizontal = false
-#  enums = [
-#      {field = "shop_list", table = "市场表"},
-#      {field = "npc_id", table = "npc表"},
-#      {field = "star", table = "enum", sheet = "星级"},
-#  ]
+  [tables.task]
+  workbook = "xlsx/任务表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "need_id", table = "item"},
+      {field = "award_id", table = "item"},
+  ]
+
+  [tables.location]
+  workbook = "xlsx/位置表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "shop_list", table = "shop"},
+      {field = "npc_id", table = "npc"},
+      {field = "star", table = "enum", sheet = "星级"},
+  ]
 
   [tables.shop]
   workbook = "xlsx/市场表.xlsx"
@@ -46,6 +51,23 @@ ignoreLine = 4
   horizontal = false
   enums = [
       {field = "star", table = "enum", sheet = "星级"},
-      {field = "attr", table = "enum", sheet = "力量属性"},
+      {field = "attr", table = "enum", sheet = "属性"},
+  ]
+
+  [tables.spell]
+    workbook = "xlsx/法术表.xlsx"
+    horizontal = false
+    enums = [
+        {field = "star", table = "enum", sheet = "星级"},
+        {field = "attr", table = "enum", sheet = "属性"},
+        {field = "cast_type", table = "enum", sheet = "出手类型"},
+        {field = "cast_attr", table = "enum", sheet = "属性"},
+    ]
+
+  [tables.item]
+  workbook = "xlsx/物品表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "award_id", table = "item,spell"},
   ]
 

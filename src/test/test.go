@@ -2,11 +2,11 @@ package main
 
 import (
 	"cmn"
+	"dbc"
 	"encoding/json"
 	"fmt"
 	"frm/plog"
 	"reflect"
-	"regexp"
 )
 
 type Point struct {
@@ -22,7 +22,11 @@ type XXX struct {
 func main() {
 	plog.InitLog("test.log", plog.LOG_TRACE)
 
-	fmt.Println(regexp.Match("(?i:^\\[Rate\\])", []byte("[rate]#1")))
+	l := dbc.GetAllNpc()
+	for key, val := range l {
+		fmt.Printf("%#v %#v\n", key, val)
+	}
+	//fmt.Println(regexp.Match("(?i:^\\[Rate\\])", []byte("[rate]#1")))
 	/*fields := make([]reflect.StructField, 2)
 	fields[0].Name = "AAA"
 	fields[0].Type = reflect.TypeOf(int(0))
