@@ -188,7 +188,7 @@ func (p *CodeBuilder) AppendKeyword(code *jen.Statement, t reflect.Type) *jen.St
 		return code.Float64()
 
 	case reflect.Int:
-		return code.Int()
+		return code.Int64()
 
 	case reflect.String:
 		return code.String()
