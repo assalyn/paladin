@@ -140,40 +140,41 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 		}
 	}()
 
-	if p.row[p.col] == "NULL" {
-		p.col++
+	col := p.col
+	p.col++
+
+	if p.row[col] == "NULL" {
 		return
 	}
 
 	switch elem.Type().Kind() {
 	case reflect.Int:
-		value, err := strconv.ParseInt(p.row[p.col], 10, 64)
+		value, err := strconv.ParseInt(p.row[col], 10, 64)
 		if err != nil {
-			plog.Errorf("错误的INT数值%s, 第%d列\n", p.row[p.col], p.col)
+			plog.Errorf("错误的INT数值%s, 第%d列\n", p.row[col], col)
 			return
 		}
 		elem.SetInt(value)
 
 	case reflect.Uint:
-		value, err := strconv.ParseUint(p.row[p.col], 10, 64)
+		value, err := strconv.ParseUint(p.row[col], 10, 64)
 		if err != nil {
-			plog.Errorf("错误的UINT数值%s, 第%d列\n", p.row[p.col], p.col)
+			plog.Errorf("错误的UINT数值%s, 第%d列\n", p.row[col], col)
 			return
 		}
 		elem.SetUint(value)
 
 	case reflect.String:
-		elem.SetString(p.row[p.col])
+		elem.SetString(p.row[col])
 
 	case reflect.Float64:
-		value, err := strconv.ParseFloat(p.row[p.col], 64)
+		value, err := strconv.ParseFloat(p.row[col], 64)
 		if err != nil {
-			plog.Errorf("错误的float64数值%s, 第%d列\n", p.row[p.col], p.col)
+			plog.Errorf("错误的float64数值%s, 第%d列\n", p.row[col], col)
 			return
 		}
 		elem.SetFloat(value)
 	}
-	p.col++
 }
 
 // 是否匹配 [rate]#xxx 或
