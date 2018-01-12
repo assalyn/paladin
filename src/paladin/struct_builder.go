@@ -145,7 +145,12 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 				Name: cmn.CamelName(p.rows[1][j]),
 			})
 		}
-		subStruct := reflect.StructOf(fs)
+		var subStruct reflect.Type
+		if len(fs) > 1 {
+			subStruct = reflect.StructOf(fs)
+		} else {
+			subStruct = fs[0].Type
+		}
 		sliceStruct := reflect.SliceOf(subStruct)
 		field = reflect.StructField{
 			Type: sliceStruct,
@@ -162,7 +167,12 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 				Name: cmn.CamelName(p.rows[1][j]),
 			})
 		}
-		subStruct := reflect.StructOf(fs)
+		var subStruct reflect.Type
+		if len(fs) > 1 {
+			subStruct = reflect.StructOf(fs)
+		} else {
+			subStruct = fs[0].Type
+		}
 		sliceStruct := reflect.MapOf(fs[0].Type, subStruct)
 		field = reflect.StructField{
 			Type: sliceStruct,

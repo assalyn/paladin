@@ -81,39 +81,47 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 	if p.col >= len(p.row) {
 		return value, cmn.ErrEOF
 	}
-	allNull := true
-	for i := 0; i < value.NumField(); i++ {
-		if p.row[p.col+i] != "NULL" {
-			allNull = false
+	if elemType.Kind() == reflect.Struct {
+		allNull := true
+		for i := 0; i < value.NumField(); i++ {
+			if p.row[p.col+i] != "NULL" {
+				allNull = false
+			}
 		}
-	}
-	if allNull {
-		// 全部成员都为NULL时，代表这个slice没数据
-		return value, cmn.ErrEOF
-	}
-	for i := 0; i < value.NumField(); i++ {
-		// 读不出来了
-		if p.matchSliceDesc(sliceName) == false {
+		if allNull {
+			// 全部成员都为NULL时，代表这个slice没数据
 			return value, cmn.ErrEOF
 		}
-		p.assignMember(value.Field(i))
+		for i := 0; i < value.NumField(); i++ {
+			// 读不出来了
+			if p.matchSliceDesc(sliceName) == false {
+				return value, cmn.ErrEOF
+			}
+			p.assignMember(value.Field(i))
+		}
+	} else {
+		p.assignMember(value)
 	}
 	return value, nil
 }
 
 func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key reflect.Value, value reflect.Value, err error) {
 	value = reflect.New(elemType).Elem()
-	for i := 0; i < value.NumField(); i++ {
-		// 这个数据不是以前那个map结构了
-		if p.matchMapDesc(mapName) == false {
-			return key, value, cmn.ErrEOF
+	if elemType.Kind() == reflect.Struct {
+		for i := 0; i < value.NumField(); i++ {
+			// 这个数据不是以前那个map结构了
+			if p.matchMapDesc(mapName) == false {
+				return key, value, cmn.ErrEOF
+			}
+			// 键值为NULL时过滤掉这条map数据
+			if i == 0 && p.row[p.col] == "NULL" {
+				p.col += value.NumField()
+				return key, value, cmn.ErrEOF
+			}
+			p.assignMember(value.Field(i))
 		}
-		// 键值为NULL时过滤掉这条map数据
-		if i == 0 && p.row[p.col] == "NULL" {
-			p.col += value.NumField()
-			return key, value, cmn.ErrEOF
-		}
-		p.assignMember(value.Field(i))
+	} else {
+		p.assignMember(value)
 	}
 	return value.Field(0), value, nil
 }

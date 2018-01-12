@@ -58,6 +58,7 @@ func (p *CodeBuilder) GenType(t reflect.Type, structName string) {
 	p.genInit()
 }
 
+// 这个代码问题还挺多的
 func (p *CodeBuilder) genType(t reflect.Type, structName string, printPrefix string) {
 	//fmt.Printf("%s[gen type %s]\n", printPrefix, t.Name())
 	fields := make([]jen.Code, t.NumField())
@@ -71,14 +72,26 @@ func (p *CodeBuilder) genType(t reflect.Type, structName string, printPrefix str
 			fields[i] = jen.Id(subField.Name).Id(subStruct)
 
 		case reflect.Map:
-			mapSubStruct := structName + subField.Name
-			p.genType(subField.Type.Elem(), mapSubStruct, printPrefix+"  ")
-			fields[i] = jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())).Id(mapSubStruct)
+			elem := subField.Type.Elem()
+			if elem.Kind() == reflect.Struct {
+				mapSubStruct := structName + subField.Name
+				p.genType(elem, mapSubStruct, printPrefix+"  ")
+				fields[i] = jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())).Id(mapSubStruct)
+			} else {
+				// 常规类型 int, float, string等
+				fields[i] = p.AppendKeyword(jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())), elem)
+			}
 
 		case reflect.Slice:
-			sliceSubStruct := structName + subField.Name
-			p.genType(subField.Type.Elem(), sliceSubStruct, printPrefix+"  ")
-			fields[i] = jen.Id(subField.Name).Index().Id(sliceSubStruct)
+			elem := subField.Type.Elem()
+			if elem.Kind() == reflect.Struct {
+				sliceSubStruct := structName + subField.Name
+				p.genType(elem, sliceSubStruct, printPrefix+"  ")
+				fields[i] = jen.Id(subField.Name).Index().Id(sliceSubStruct)
+			} else {
+				// 常规类型 int, float, string等
+				fields[i] = p.AppendKeyword(jen.Id(subField.Name).Index(), elem) //  Id(elem.Kind().String())
+			}
 
 		default:
 			// 基础类型
@@ -160,7 +173,7 @@ func (p *CodeBuilder) TypeToJenStatement(t reflect.Type) *jen.Statement {
 		return jen.Bool()
 
 	case reflect.Int:
-		return jen.Int()
+		return jen.Int64()
 
 	case reflect.String:
 		return jen.String()
