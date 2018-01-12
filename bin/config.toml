@@ -36,6 +36,15 @@ ignoreLine = 4
       {field = "shop_list", table = "shop"},
       {field = "npc_id", table = "npc"},
       {field = "star", table = "enum", sheet = "星级"},
+      {field = "mission_id", table = "mission"},
+  ]
+
+  [tables.mission]
+  workbook = "xlsx/关卡表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "enemy_id", table = "monster"},
+      {field = "award_id", table = "item"},
   ]
 
   [tables.shop]
@@ -44,6 +53,21 @@ ignoreLine = 4
   enums = [
       {field = "sell_id", table = "fabao"},
       {field = "buy_id", table = "fabao"},
+  ]
+
+  [tables.monster]
+  workbook = "xlsx/怪物表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "stage", table = "enum", sheet = "境界"},
+      {field = "spell_id", table = "spell"},
+  ]
+
+  [tables.skill]
+  workbook = "xlsx/技能表.xlsx"
+  horizontal = false
+  enums = [
+       {field = "item_id", table = "item"},
   ]
 
   [tables.fabao]
@@ -55,19 +79,35 @@ ignoreLine = 4
   ]
 
   [tables.spell]
-    workbook = "xlsx/法术表.xlsx"
-    horizontal = false
-    enums = [
-        {field = "star", table = "enum", sheet = "星级"},
-        {field = "attr", table = "enum", sheet = "属性"},
-        {field = "cast_type", table = "enum", sheet = "出手类型"},
-        {field = "cast_attr", table = "enum", sheet = "属性"},
-    ]
+  workbook = "xlsx/法术表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "star", table = "enum", sheet = "星级"},
+      {field = "attr", table = "enum", sheet = "属性"},
+      {field = "cast_type", table = "enum", sheet = "出手类型"},
+      {field = "cast_attr", table = "enum", sheet = "属性"},
+  ]
 
   [tables.item]
   workbook = "xlsx/物品表.xlsx"
   horizontal = false
   enums = [
       {field = "award_id", table = "item,spell"},
+  ]
+
+  [tables.equip]
+  workbook = "xlsx/装备表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "star", table = "enum", sheet = "星级"},
+  ]
+
+  [tables.recipe]
+  workbook = "xlsx/配方表.xlsx"
+  horizontal = false
+  enums = [
+      {field = "output_id", table = "item"},
+      {field = "material_id", table = "item"},
+      {field = "stage", table = "enum", sheet = "境界"},
   ]
 

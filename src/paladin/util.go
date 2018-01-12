@@ -6,6 +6,9 @@ import (
 )
 
 func showStruct(value reflect.Value) {
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
 	fmt.Printf("[showStruct]")
 	for i := 0; i < value.NumField(); i++ {
 		fmt.Printf("%#v ", value.Field(i).Interface())

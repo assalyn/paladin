@@ -90,6 +90,7 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 		}
 		if allNull {
 			// 全部成员都为NULL时，代表这个slice没数据
+			p.col += value.NumField()
 			return value, cmn.ErrEOF
 		}
 		for i := 0; i < value.NumField(); i++ {
@@ -100,6 +101,9 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 			p.assignMember(value.Field(i))
 		}
 	} else {
+		if p.matchSliceDesc(sliceName) == false {
+			return value, cmn.ErrEOF
+		}
 		p.assignMember(value)
 	}
 	return value, nil
@@ -121,6 +125,10 @@ func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key ref
 			p.assignMember(value.Field(i))
 		}
 	} else {
+		// 这个数据不是以前那个map结构了
+		if p.matchMapDesc(mapName) == false {
+			return key, value, cmn.ErrEOF
+		}
 		p.assignMember(value)
 	}
 	return value.Field(0), value, nil
@@ -128,20 +136,19 @@ func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key ref
 
 // 给member成员赋值
 func (p *RowReader) assignMember(elem reflect.Value) {
+	col := p.col
+	p.col++
 	defer func() {
 		switch err := recover().(type) {
 		case nil:
 
 		case error:
-			plog.Errorf("读取%d列数据时发生错误%v\n", p.col, err)
+			plog.Errorf("读取%d列数据时发生错误%v\n", col, err)
 
 		default:
-			plog.Errorf("读取%d列数据时发生错误%v\n", p.col, err)
+			plog.Errorf("读取%d列数据时发生错误%v\n", col, err)
 		}
 	}()
-
-	col := p.col
-	p.col++
 
 	if p.row[col] == "NULL" {
 		return

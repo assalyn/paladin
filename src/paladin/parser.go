@@ -342,6 +342,8 @@ func (p *Parser) createStruct(rows [][]string) map[int]interface{} {
 	}
 	builder := NewStructBuilder(rows[:conf.Cfg.IgnoreLine])
 	builder.BuildStruct()
+	//b := NewCodeBuilder("", "", "")
+	//b.DebugType(builder.StructType, "")
 	for rowIdx, row := range rows {
 		if rowIdx < conf.Cfg.IgnoreLine {
 			continue
