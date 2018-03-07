@@ -40,14 +40,17 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 		value = reflect.MakeMap(t)
 		for {
 			key, elemValue, err := p.readMapValue(fieldName, t.Elem())
-			if err != nil && err != cmn.ErrEOF {
+			if err == nil {
+				value.SetMapIndex(key, elemValue)
+			} else if err == cmn.ErrEOF {
+				break
+			} else if err == cmn.ErrNull {
+				continue
+			} else {
 				plog.Error("读取数据错误", err)
 				return value, err
 			}
-			if err == cmn.ErrEOF {
-				break
-			}
-			value.SetMapIndex(key, elemValue)
+
 		}
 		return value, nil
 
@@ -55,14 +58,16 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 		var elemArray []reflect.Value
 		for {
 			elemValue, err := p.readSliceValue(fieldName, t.Elem())
-			if err != nil && err != cmn.ErrEOF {
+			if err == nil {
+				elemArray = append(elemArray, elemValue)
+			} else if err == cmn.ErrEOF {
+				break
+			} else if err == cmn.ErrNull {
+				continue
+			} else {
 				plog.Error("读取数据错误", err)
 				return value, err
 			}
-			if err == cmn.ErrEOF {
-				break
-			}
-			elemArray = append(elemArray, elemValue)
 		}
 		value = reflect.MakeSlice(t, len(elemArray), len(elemArray))
 		for i := 0; i < len(elemArray); i++ {
@@ -91,7 +96,7 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 		if allNull {
 			// 全部成员都为NULL时，代表这个slice没数据
 			p.col += value.NumField()
-			return value, cmn.ErrEOF
+			return value, cmn.ErrNull
 		}
 		for i := 0; i < value.NumField(); i++ {
 			// 读不出来了
@@ -120,7 +125,7 @@ func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key ref
 			// 键值为NULL时过滤掉这条map数据
 			if i == 0 && p.row[p.col] == "NULL" {
 				p.col += value.NumField()
-				return key, value, cmn.ErrEOF
+				return key, value, cmn.ErrNull
 			}
 			p.assignMember(value.Field(i))
 		}
