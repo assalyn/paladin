@@ -36,8 +36,7 @@ func NewXlsxReader(autoId bool, horizontal bool) *XlsxReader {
 }
 
 // 读取数据
-func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumItem) (*XlsxInfo, error) {
-	//xlFile, err := xlsx.OpenFile(xlsxFile)
+func (p *XlsxReader) Read(tableName string, xlsxFile string, sheets []string, enums []conf.EnumItem) (*XlsxInfo, error) {
 	xlsx, err := excelize.OpenFile(xlsxFile)
 	if err != nil {
 		plog.Errorf("fail to read %s!! %v\n", xlsxFile, err)
@@ -48,6 +47,20 @@ func (p *XlsxReader) Read(tableName string, xlsxFile string, enums []conf.EnumIt
 	info.TableName = tableName
 	info.Enums = enums
 	for _, sheet := range xlsx.GetSheetMap() {
+		// 如果指定了sheet，则检查sheet. 否则全表查询
+		if len(sheets) != 0 {
+			found := false
+			for i := 0; i < len(sheets); i++ {
+				if sheets[i] == sheet {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
 		var data [][]string
 		rows := xlsx.GetRows(sheet)
 		// 过滤数据rows，去掉全空

@@ -70,7 +70,7 @@ func (p *Parser) Start() {
 func (p *Parser) loadFiles() {
 	// 加载枚举文件
 	reader := NewXlsxReader(false, false)
-	enumInfo, err := reader.Read("enum", conf.Cfg.EnumFile, nil)
+	enumInfo, err := reader.Read("enum", conf.Cfg.EnumFile, nil, nil)
 	if err != nil {
 		plog.Panic("读取枚举表失败!!", err)
 	}
@@ -79,16 +79,16 @@ func (p *Parser) loadFiles() {
 	// 加载xlsx文件
 	for tblName, tbl := range conf.Cfg.Tables {
 		reader := NewXlsxReader(tbl.AutoId, tbl.Horizontal)
-		info, err := reader.Read(tblName, tbl.Workbook, tbl.Enums)
+		info, err := reader.Read(tblName, tbl.Workbook, tbl.Sheet, tbl.Enums)
 		if err != nil {
-			plog.Errorf("读取%s失败！错误码:%v\n", tbl.Workbook, err)
+			plog.Errorf("读取%s.%s失败！错误码:%v\n", tbl.Workbook, tbl.Sheet, err)
 		}
 		p.Xlsx[tblName] = info
 	}
 
 	// 加载多语言文件
 	reader = NewXlsxReader(false, false)
-	localeInfo, err := reader.Read("locale", conf.Cfg.LocaleFile, nil)
+	localeInfo, err := reader.Read("locale", conf.Cfg.LocaleFile, nil, nil)
 	if err != nil {
 		plog.Panic("读取多语言表失败!!", err)
 	}

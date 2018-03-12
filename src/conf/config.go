@@ -22,7 +22,8 @@ type LocaleItem struct {
 }
 
 type Table struct {
-	Workbook   string
+	Workbook   string       // 工作簿
+	Sheet      []string     // 子表
 	AutoId     bool         // 自动id
 	Horizontal bool         // 是否水平解析
 	Singleton  bool         // 是否单独结构. 一般来说，只有全局配置是不需要map索引的
