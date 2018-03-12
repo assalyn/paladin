@@ -54,7 +54,6 @@ func (p *CodeWriter) Save(filePath string) error {
 	for _, value := range p.headComments {
 		file.WriteString(value)
 	}
-	file.WriteString("\n")
 
 	// 输出usings
 	for _, value := range p.usings {
@@ -170,7 +169,7 @@ func (p *CodeWriterStruct) Save() {
 			p.owner.writeLine(fmt.Sprintf("%s\tpublic List<%s> %s;\n", p.prefix, field.typeName, field.fieldName)) // 写入slice子项
 
 		case "":
-			p.owner.writeLine(fmt.Sprintf("%s\tpublic %s %s\n;", p.prefix, field.typeName, field.fieldName)) // 写入普通子项
+			p.owner.writeLine(fmt.Sprintf("%s\tpublic %s %s;\n", p.prefix, field.typeName, field.fieldName)) // 写入普通子项
 
 		default:
 			plog.Error("invalid fieldEnum", field.fieldEnum)

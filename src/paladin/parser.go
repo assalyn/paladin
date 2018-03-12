@@ -160,18 +160,20 @@ func (p *Parser) outputLocale() {
 // 生成桩文件
 func (p *Parser) genStubCode() {
 	if p.genGolang {
-		if err := os.MkdirAll(p.stubDir, 0777); err != nil {
+		var goDir = p.stubDir + "/go/"
+		if err := os.MkdirAll(goDir, 0777); err != nil {
 			plog.Errorf("创建目录%v失败%v\n", p.stubDir, err)
 			return
 		}
-		p.genGolangStub(p.stubDir)
+		p.genGolangStub(goDir)
 	}
 	if p.genCsharp {
-		if err := os.MkdirAll(p.stubDir, 0777); err != nil {
+		var csDir = p.stubDir + "/cs/"
+		if err := os.MkdirAll(csDir, 0777); err != nil {
 			plog.Errorf("创建目录%v失败%v\n", p.stubDir, err)
 			return
 		}
-		p.genCsharpStub(p.stubDir)
+		p.genCsharpStub(csDir)
 	}
 }
 
@@ -387,11 +389,11 @@ func (p *Parser) mergeMap(origin map[int]interface{}, addMap map[int]interface{}
 }
 
 // 生成golang桩文件
-func (p *Parser) genGolangStub(dir string) {
+func (p *Parser) genGolangStub(codeDir string) {
 	plog.Trace()
 	for fileName, data := range p.Output {
 		for _, v := range data {
-			c := NewGoCodeBuilder(p.stubDir, p.outputDir, fileName)
+			c := NewGoCodeBuilder(codeDir, p.outputDir, fileName)
 			c.GenStructWithName(v, fileName)
 			c.Output()
 			break
@@ -400,12 +402,13 @@ func (p *Parser) genGolangStub(dir string) {
 }
 
 // 生成C#桩文件
-func (p *Parser) genCsharpStub(dir string) {
+func (p *Parser) genCsharpStub(codeDir string) {
 	plog.Trace()
 	for fileName, data := range p.Output {
 		for _, v := range data {
-			c := NewCsharpCodeBuilder(p.stubDir, p.outputDir, fileName)
-			c.GenStructWithName(v, fileName)
+			var csFileName = cmn.CamelName(fileName)
+			c := NewCsharpCodeBuilder(codeDir, p.outputDir, csFileName)
+			c.GenStructWithName(v, csFileName)
 			c.Output()
 			break
 		}
