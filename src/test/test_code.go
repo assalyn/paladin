@@ -27,7 +27,7 @@ func main() {
 	fmt.Printf("%#v\n", builder.StructType)
 	builder.CreateInstance()
 
-	coder := paladin.NewCodeBuilder("AAA")
+	coder := paladin.NewGoCodeBuilder("AAA")
 	coder.DebugType(builder.StructType, "AAA")
 }
 

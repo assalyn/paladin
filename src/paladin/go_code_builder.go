@@ -10,7 +10,7 @@ import (
 	"github.com/dave/jennifer/jen"
 )
 
-type CodeBuilder struct {
+type GoCodeBuilder struct {
 	jfile      *jen.File
 	codeDir    string
 	dataDir    string
@@ -18,8 +18,8 @@ type CodeBuilder struct {
 	structName string // 给定的外层结构名, 为解决创建的匿名结构问题
 }
 
-func NewCodeBuilder(codeDir string, dataDir string, fileName string) *CodeBuilder {
-	c := new(CodeBuilder)
+func NewGoCodeBuilder(codeDir string, dataDir string, fileName string) *GoCodeBuilder {
+	c := new(GoCodeBuilder)
 	c.codeDir = codeDir
 	c.dataDir = dataDir
 	c.fileName = fileName
@@ -28,12 +28,12 @@ func NewCodeBuilder(codeDir string, dataDir string, fileName string) *CodeBuilde
 	return c
 }
 
-func (p *CodeBuilder) GenStruct(obj interface{}) {
+func (p *GoCodeBuilder) GenStruct(obj interface{}) {
 	p.structName = reflect.TypeOf(obj).Name()
 	p.GenStructWithName(obj, p.structName)
 }
 
-func (p *CodeBuilder) GenStructWithName(obj interface{}, structName string) {
+func (p *GoCodeBuilder) GenStructWithName(obj interface{}, structName string) {
 	p.structName = cmn.CamelName(structName)
 	t := reflect.TypeOf(obj)
 	for t.Kind() == reflect.Ptr {
@@ -46,7 +46,7 @@ func (p *CodeBuilder) GenStructWithName(obj interface{}, structName string) {
 	p.genInit()
 }
 
-func (p *CodeBuilder) GenType(t reflect.Type, structName string) {
+func (p *GoCodeBuilder) GenType(t reflect.Type, structName string) {
 	p.structName = structName
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -59,7 +59,7 @@ func (p *CodeBuilder) GenType(t reflect.Type, structName string) {
 }
 
 // 这个代码问题还挺多的
-func (p *CodeBuilder) genType(t reflect.Type, structName string, printPrefix string) {
+func (p *GoCodeBuilder) genType(t reflect.Type, structName string, printPrefix string) {
 	//fmt.Printf("%s[gen type %s]\n", printPrefix, t.Name())
 	fields := make([]jen.Code, t.NumField())
 	for i := 0; i < t.NumField(); i++ {
@@ -105,19 +105,19 @@ func (p *CodeBuilder) genType(t reflect.Type, structName string, printPrefix str
 }
 
 // 生成变量声明代码
-func (p *CodeBuilder) genValue() {
+func (p *GoCodeBuilder) genValue() {
 	p.jfile.Var().Id("tbl" + p.structName).Map(jen.Int64()).Id("*" + p.structName)
 }
 
 // 生成GetXXX(id) *XXX
-func (p *CodeBuilder) genGet() {
+func (p *GoCodeBuilder) genGet() {
 	p.jfile.Func().Id("Get" + p.structName).Params(jen.Id("id").Int64()).Id("*" + p.structName).Block(
 		jen.Return().Id("tbl" + p.structName).Index(jen.Id("id")),
 	)
 }
 
 // 生成GetAllXXX() []*XXX
-func (p *CodeBuilder) genGetAll() {
+func (p *GoCodeBuilder) genGetAll() {
 	p.jfile.Func().Id("GetAll" + p.structName).Params().Map(jen.Int64()).Id("*" + p.structName).Block(
 		jen.Return().Id("tbl" + p.structName),
 	)
@@ -134,7 +134,7 @@ func (p *CodeBuilder) genGetAll() {
 		plog.Error(err)
 	}
 */
-func (p *CodeBuilder) genInit() {
+func (p *GoCodeBuilder) genInit() {
 	p.jfile.Func().Id("init").Params().Block(
 		jen.List(jen.Id("file"), jen.Id("err")).Op(":=").Qual("os", "Open").Call(jen.Lit(p.dataDir+"/"+p.fileName+".json")),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
@@ -151,13 +151,13 @@ func (p *CodeBuilder) genInit() {
 }
 
 // 输出
-func (p *CodeBuilder) Output() {
+func (p *GoCodeBuilder) Output() {
 	if err := p.jfile.Save(p.codeDir + "/" + p.fileName + ".dbc.go"); err != nil {
 		plog.Error(err)
 	}
 }
 
-func (p *CodeBuilder) DebugType(t reflect.Type, structName string) {
+func (p *GoCodeBuilder) DebugType(t reflect.Type, structName string) {
 	p.structName = structName
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -167,7 +167,7 @@ func (p *CodeBuilder) DebugType(t reflect.Type, structName string) {
 }
 
 // 反射类型转换为jennifer语句
-func (p *CodeBuilder) TypeToJenStatement(t reflect.Type) *jen.Statement {
+func (p *GoCodeBuilder) TypeToJenStatement(t reflect.Type) *jen.Statement {
 	switch t.Kind() {
 	case reflect.Bool:
 		return jen.Bool()
@@ -189,7 +189,7 @@ func (p *CodeBuilder) TypeToJenStatement(t reflect.Type) *jen.Statement {
 	}
 }
 
-func (p *CodeBuilder) AppendKeyword(code *jen.Statement, t reflect.Type) *jen.Statement {
+func (p *GoCodeBuilder) AppendKeyword(code *jen.Statement, t reflect.Type) *jen.Statement {
 	switch t.Kind() {
 	case reflect.Bool:
 		return code.Bool()
@@ -212,7 +212,7 @@ func (p *CodeBuilder) AppendKeyword(code *jen.Statement, t reflect.Type) *jen.St
 	}
 }
 
-func (p *CodeBuilder) structNameToValueName(structName string) (valueName string) {
+func (p *GoCodeBuilder) structNameToValueName(structName string) (valueName string) {
 	if structName == "" {
 		return ""
 	}

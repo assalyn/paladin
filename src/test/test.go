@@ -34,7 +34,7 @@ func main() {
 	fields[1].Type = reflect.TypeOf("")
 	t := reflect.StructOf(fields)*/
 
-	//coder := paladin.NewCodeBuilder("aaa")
+	//coder := paladin.NewGoCodeBuilder("aaa")
 	//coder.DebugType(reflect.TypeOf(&XXX{}), "Aaa")
 }
 

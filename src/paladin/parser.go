@@ -342,7 +342,7 @@ func (p *Parser) createStruct(rows [][]string) map[int]interface{} {
 	}
 	builder := NewStructBuilder(rows[:conf.Cfg.IgnoreLine])
 	builder.BuildStruct()
-	//b := NewCodeBuilder("", "", "")
+	//b := NewGoCodeBuilder("", "", "")
 	//b.DebugType(builder.StructType, "")
 	for rowIdx, row := range rows {
 		if rowIdx < conf.Cfg.IgnoreLine {
@@ -391,7 +391,7 @@ func (p *Parser) genGolangStub(dir string) {
 	plog.Trace()
 	for fileName, data := range p.Output {
 		for _, v := range data {
-			c := NewCodeBuilder(p.stubDir, p.outputDir, fileName)
+			c := NewGoCodeBuilder(p.stubDir, p.outputDir, fileName)
 			c.GenStructWithName(v, fileName)
 			c.Output()
 			break
@@ -402,4 +402,12 @@ func (p *Parser) genGolangStub(dir string) {
 // 生成C#桩文件
 func (p *Parser) genCsharpStub(dir string) {
 	plog.Trace()
+	for fileName, data := range p.Output {
+		for _, v := range data {
+			c := NewCsharpCodeBuilder(p.stubDir, p.outputDir, fileName)
+			c.GenStructWithName(v, fileName)
+			c.Output()
+			break
+		}
+	}
 }
