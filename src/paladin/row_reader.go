@@ -103,13 +103,17 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 			if p.matchSliceDesc(sliceName) == false {
 				return value, cmn.ErrEOF
 			}
-			p.assignMember(value.Field(i))
+			if err := p.assignMember(value.Field(i)); err != nil {
+				return value, err
+			}
 		}
 	} else {
 		if p.matchSliceDesc(sliceName) == false {
 			return value, cmn.ErrEOF
 		}
-		p.assignMember(value)
+		if err := p.assignMember(value); err != nil {
+			return value, err
+		}
 	}
 	return value, nil
 }
@@ -127,20 +131,24 @@ func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key ref
 				p.col += value.NumField()
 				return key, value, cmn.ErrNull
 			}
-			p.assignMember(value.Field(i))
+			if err := p.assignMember(value.Field(i)); err != nil {
+				return key, value, err
+			}
 		}
 	} else {
 		// 这个数据不是以前那个map结构了
 		if p.matchMapDesc(mapName) == false {
 			return key, value, cmn.ErrEOF
 		}
-		p.assignMember(value)
+		if err := p.assignMember(value); err != nil {
+			return key, value, err
+		}
 	}
 	return value.Field(0), value, nil
 }
 
 // 给member成员赋值
-func (p *RowReader) assignMember(elem reflect.Value) {
+func (p *RowReader) assignMember(elem reflect.Value) error {
 	col := p.col
 	p.col++
 	defer func() {
@@ -156,7 +164,7 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 	}()
 
 	if p.row[col] == "NULL" {
-		return
+		return cmn.ErrNull
 	}
 
 	switch elem.Type().Kind() {
@@ -164,7 +172,7 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 		value, err := strconv.ParseInt(p.row[col], 10, 64)
 		if err != nil {
 			plog.Errorf("错误的INT数值%s, 第%d列\n", p.row[col], col)
-			return
+			return cmn.ErrNull
 		}
 		elem.SetInt(value)
 
@@ -172,7 +180,7 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 		value, err := strconv.ParseUint(p.row[col], 10, 64)
 		if err != nil {
 			plog.Errorf("错误的UINT数值%s, 第%d列\n", p.row[col], col)
-			return
+			return cmn.ErrNull
 		}
 		elem.SetUint(value)
 
@@ -183,10 +191,11 @@ func (p *RowReader) assignMember(elem reflect.Value) {
 		value, err := strconv.ParseFloat(p.row[col], 64)
 		if err != nil {
 			plog.Errorf("错误的float64数值%s, 第%d列\n", p.row[col], col)
-			return
+			return cmn.ErrNull
 		}
 		elem.SetFloat(value)
 	}
+	return nil
 }
 
 // 是否匹配 [rate]#xxx 或
