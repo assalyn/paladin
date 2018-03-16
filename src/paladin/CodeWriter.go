@@ -131,12 +131,12 @@ func (p *CodeWriterStruct) AddMap(keyType string, valueType string, fieldName st
 			return
 		}
 	}
-	p.fields[p.idx] = CodeNode{
+	p.fields = append(p.fields, CodeNode{
 		fieldEnum: "map",
 		keyName:   keyType,
 		typeName:  valueType,
 		fieldName: fieldName,
-	}
+	})
 }
 
 func (p *CodeWriterStruct) AddSlice(typeName string, fieldName string) {
@@ -150,11 +150,11 @@ func (p *CodeWriterStruct) AddSlice(typeName string, fieldName string) {
 			return
 		}
 	}
-	p.fields[p.idx] = CodeNode{
+	p.fields = append(p.fields, CodeNode{
 		fieldEnum: "slice",
 		typeName:  typeName,
 		fieldName: fieldName,
-	}
+	})
 }
 
 // 缩进后面再弄吧
