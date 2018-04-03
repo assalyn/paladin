@@ -149,7 +149,7 @@ func (p *CsharpCodeBuilder) TypeName(t reflect.Type) string {
 		return "double"
 
 	case reflect.Int:
-		return "int"
+		return "long"
 
 	case reflect.String:
 		return "string"
