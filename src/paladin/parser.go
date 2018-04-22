@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"frm/plog"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -271,41 +272,42 @@ func (p *Parser) swapEnumField(origin [][]string, field string, swapTable map[st
 	return err
 }
 
-// todo 这里是不是性能有点问题
 func (p *Parser) swapEnumFieldMultiTable(origin [][]string, field string, swapTableList []map[string]string) error {
 	var ok bool
 	var err error = nil
 	var newValue string
 
-	column := 0
-	for ; column < len(origin[0]); column++ {
+	for column := 0; column < len(origin[0]); column++ {
 		if origin[1][column] != field {
 			continue
 		}
 
 		for rowIdx := 0; rowIdx < len(origin); rowIdx++ {
+		NextRowId:
 			// 前ignoreLine行是结构，不替换
 			if rowIdx < conf.Cfg.IgnoreLine {
 				continue
 			}
+			// 原本就是NULL
 			if origin[rowIdx][column] == "NULL" {
-				newValue = "NULL"
-			} else {
-				found := false
-				for _, swapTable := range swapTableList {
-					newValue, ok = swapTable[origin[rowIdx][column]]
-					if ok {
-						found = true
-						origin[rowIdx][column] = newValue
-						break
-					}
-				}
-				if found == false {
-					plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
-					err = cmn.ErrFail
-					continue
+				continue
+			}
+			// 原本就已经是数字了，不需要枚举
+			_, e := strconv.ParseInt(origin[rowIdx][column], 10, 64)
+			if e == nil {
+				continue
+			}
+
+			for _, swapTable := range swapTableList {
+				newValue, ok = swapTable[origin[rowIdx][column]]
+				if ok {
+					origin[rowIdx][column] = newValue
+					goto NextRowId
 				}
 			}
+
+			plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
+			err = cmn.ErrFail
 		}
 	}
 	return err

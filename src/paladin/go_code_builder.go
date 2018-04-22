@@ -129,6 +129,7 @@ func (p *GoCodeBuilder) genGetAll() {
 		plog.Error(err)
 		return
 	}
+	defer file.Close()
 	decoder := json.NewDecoder(file)
 	if err = decoder.Decode(&tblLocation); err != nil {
 		plog.Error(err)
@@ -141,6 +142,7 @@ func (p *GoCodeBuilder) genInit() {
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to open!!"), jen.Id("err"))),
 			jen.Return(),
 		),
+		jen.Id("defer").Op(" ").Id("file").Dot("Close").Call(),
 		jen.Id("decoder").Op(":=").Qual("encoding/json", "NewDecoder").Call(jen.Id("file")),
 		jen.Id("err").Op("=").Id("decoder").Dot("Decode").Call(jen.Id("&tbl"+p.structName)),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
