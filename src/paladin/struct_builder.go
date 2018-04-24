@@ -98,7 +98,7 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 	// 同一个结构要留下来
 	sentry := *column
 	for ; sentry < len(p.layerDesc); sentry++ {
-		if strings.Contains(p.layerDesc[sentry], currDesc) == false {
+		if p.layerDesc[sentry] != currDesc {
 			break
 		}
 	}

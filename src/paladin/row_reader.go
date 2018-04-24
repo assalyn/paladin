@@ -91,6 +91,7 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 		for i := 0; i < value.NumField(); i++ {
 			if p.row[p.col+i] != "NULL" {
 				allNull = false
+				break
 			}
 		}
 		if allNull {
@@ -199,11 +200,11 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 }
 
 // 是否匹配 [rate]#xxx 或
-func (p *RowReader) matchSliceDesc(dictName string) bool {
+func (p *RowReader) matchSliceDesc(sliceName string) bool {
 	if p.col >= len(p.row) {
 		return false
 	}
-	matched, _ := regexp.Match(fmt.Sprintf("(?i:^\\[%s\\])", dictName), []byte(p.desc[p.col]))
+	matched, _ := regexp.Match(fmt.Sprintf("(?i:^\\[%s\\])", sliceName), []byte(p.desc[p.col]))
 	return matched
 }
 
