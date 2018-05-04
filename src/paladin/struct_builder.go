@@ -18,9 +18,6 @@ type StructBuilder struct {
 	typeDesc  []string // 类型简单描述. 便于解析
 	layerDesc []string // 层级描述 rows[3]
 	rows      [][]string
-
-	// 临时数据
-	prevLayerDesc string
 }
 
 // 新建struct创建器
@@ -38,17 +35,18 @@ func NewStructBuilder(rows [][]string) *StructBuilder {
 
 func (p *StructBuilder) BuildStruct() {
 	fields := make([]reflect.StructField, 0, 8)
+	subName := ""
 	column := 0
 	for column < len(p.layerDesc) {
 		// 获取数据簇
-		field, err := p.parseField(&column)
+		field, err := p.parseField(0, &column, &subName)
 		if err != nil {
-			fmt.Println("错误的数据结构", err)
+			if err == cmn.ErrSkip {
+				continue
+			} else {
+				plog.Error("错误的数据结构", err)
+			}
 			return
-		}
-		// 空数据结构，略过，可能是重复结构
-		if field.Name == "" {
-			continue
 		}
 		fields = append(fields, field)
 	}
@@ -74,7 +72,7 @@ func (p *StructBuilder) CreateInstance(row []string) (id int, value interface{},
 	reader := NewRowReader(p.rows[:4], row)
 	for i := 0; i < elem.NumField(); i++ {
 		value, err := reader.ReadField(p.StructType.Field(i).Name, p.StructType.Field(i).Type, elem.Field(i))
-		if err != nil {
+		if err != nil && err != cmn.ErrNull && err != cmn.ErrSkip {
 			plog.Error("fail to assign field!!", err)
 			return 0, nil, cmn.ErrFail
 		}
@@ -84,33 +82,33 @@ func (p *StructBuilder) CreateInstance(row []string) (id int, value interface{},
 }
 
 // [XXX]数组结构; {XXX}map结构; XXX内部数据结构
-func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err error) {
-	currDesc := p.layerDesc[*column]
+func (p *StructBuilder) parseField(descSkip int, column *int, prevSubName *string) (field reflect.StructField, err error) {
+	//fmt.Printf("parseField descSkip=%v column=%v\n", descSkip, *column)
+	currDesc := p.layerDesc[*column][descSkip:]
 	if currDesc == "" {
 		field = reflect.StructField{
 			Type: p.memberType(0, *column),
 			Name: cmn.CamelName(p.rows[1][*column]),
 		}
 		*column++
-		return
+		return field, nil
 	}
 
 	// 同一个结构要留下来
 	sentry := *column
 	for ; sentry < len(p.layerDesc); sentry++ {
-		if p.layerDesc[sentry] != currDesc {
+		if strings.Index(p.layerDesc[sentry], p.layerDesc[*column]) != 0 {
 			break
 		}
 	}
 
 	// 将连续的一组都选出来. 以currDesc为基准进行解析
 	subName, subType := p.layerType(currDesc)
-	// 如果一样，说明是同一实例
-	if subName == p.prevLayerDesc {
+	if subName == *prevSubName {
+		// 如果一样，说明是同一结构的不同表达，比如[cast]#1,[cast]#2. 这种情况下，[cast]#2不用需要再处理一次了, 因为结构和[cast]#1是一样的
 		*column = sentry
-		return
+		return field, cmn.ErrSkip
 	}
-	// 如果是prevLayerDesc.yyy, 说明存在继承关系
 	switch subType {
 	case "member":
 		// 子成员
@@ -121,72 +119,21 @@ func (p *StructBuilder) parseField(column *int) (field reflect.StructField, err 
 		*column++
 
 	case "struct":
-		// 子struct类型, struct结束时创建数据结构
-		var fs []reflect.StructField
-		for j := *column; j < sentry; j++ {
-			fs = append(fs, reflect.StructField{
-				Type: p.memberType(0, j),
-				Name: cmn.CamelName(p.rows[1][j]),
-			})
-		}
-		subStruct := reflect.StructOf(fs)
-		field = reflect.StructField{
-			Type: subStruct,
-			Name: cmn.CamelName(subName),
-		}
-		*column = sentry
+		field, err = p.parseFieldStruct(subName, column, sentry)
 
 	case "slice":
-		// 记录这个slice类型, 结束时创建数据结构. 并赋值给上级数据结构. 要用递归结构
-		var fs []reflect.StructField
-		for j := *column; j < sentry; j++ {
-			fs = append(fs, reflect.StructField{
-				Type: p.memberType(0, j),
-				Name: cmn.CamelName(p.rows[1][j]),
-			})
-		}
-		var subStruct reflect.Type
-		if len(fs) > 1 {
-			subStruct = reflect.StructOf(fs)
-		} else {
-			subStruct = fs[0].Type
-		}
-		sliceStruct := reflect.SliceOf(subStruct)
-		field = reflect.StructField{
-			Type: sliceStruct,
-			Name: cmn.CamelName(subName),
-		}
-		*column = sentry
+		field, err = p.parseFieldSlice(subName, column, sentry)
 
 	case "map":
-		// 记录这个map类型, 结束时创建数据结构
-		var fs []reflect.StructField
-		for j := *column; j < sentry; j++ {
-			fs = append(fs, reflect.StructField{
-				Type: p.memberType(0, j),
-				Name: cmn.CamelName(p.rows[1][j]),
-			})
-		}
-		var subStruct reflect.Type
-		if len(fs) > 1 {
-			subStruct = reflect.StructOf(fs)
-		} else {
-			subStruct = fs[0].Type
-		}
-		sliceStruct := reflect.MapOf(fs[0].Type, subStruct)
-		field = reflect.StructField{
-			Type: sliceStruct,
-			Name: cmn.CamelName(subName),
-		}
-		*column = sentry
+		field, err = p.parseFieldMap(subName, column, sentry)
 
 	default:
 		fmt.Println("错误的依赖类型", currDesc)
-		return
+		return field, cmn.ErrFail
 	}
 
-	p.prevLayerDesc = subName
-	return
+	*prevSubName = subName
+	return field, err
 }
 
 // 获取数据簇
@@ -235,11 +182,109 @@ func (p *StructBuilder) layerType(layerDesc string) (subName string, subType str
 		return cleanStr[1 : len(cleanStr)-1], "slice"
 	} else if cleanStr[0] == '{' && cleanStr[len(cleanStr)-1] == '}' {
 		return cleanStr[1 : len(cleanStr)-1], "map"
+	} else if cleanStr[0] == '<' && cleanStr[len(cleanStr)-1] == '>' {
+		return cleanStr[1 : len(cleanStr)-1], "struct"
 	}
-	matched, _ := regexp.Match("[a-zA-Z0-9_.]*", []byte(cleanStr))
-	if matched {
-		return cleanStr, "struct"
+	return "", "invalid"
+}
+
+func (p *StructBuilder) parseFieldSlice(subName string, column *int, sentry int) (field reflect.StructField, err error) {
+	var fs []reflect.StructField
+	var sfield reflect.StructField
+	var parentHdrLen = p.SliceTailIdx(p.layerDesc[*column], subName)
+	var prevSubName = ""
+
+	for j := *column; j < sentry; {
+		sfield, err = p.parseField(parentHdrLen, &j, &prevSubName)
+		if err != nil {
+			if err == cmn.ErrSkip {
+				continue
+			} else {
+				return field, err
+			}
+		}
+		fs = append(fs, sfield)
+	}
+	var subStruct reflect.Type
+	if len(fs) > 1 {
+		subStruct = reflect.StructOf(fs)
 	} else {
-		return "", "invalid"
+		subStruct = fs[0].Type
 	}
+	sliceStruct := reflect.SliceOf(subStruct)
+	field = reflect.StructField{
+		Type: sliceStruct,
+		Name: cmn.CamelName(subName),
+	}
+	*column = sentry
+	return field, nil
+}
+
+func (p *StructBuilder) parseFieldMap(subName string, column *int, sentry int) (field reflect.StructField, err error) {
+	var fs []reflect.StructField
+	var sfield reflect.StructField
+	var parentHdrLen = p.MapTailIdx(p.layerDesc[*column], subName)
+	var prevSubName = ""
+
+	for j := *column; j < sentry; {
+		sfield, err = p.parseField(parentHdrLen, &j, &prevSubName)
+		if err != nil {
+			return field, err
+		}
+		fs = append(fs, sfield)
+	}
+	var subStruct reflect.Type
+	if len(fs) > 1 {
+		subStruct = reflect.StructOf(fs)
+	} else {
+		subStruct = fs[0].Type
+	}
+	mapStruct := reflect.MapOf(fs[0].Type, subStruct)
+	field = reflect.StructField{
+		Type: mapStruct,
+		Name: cmn.CamelName(subName),
+	}
+	*column = sentry
+	return field, nil
+}
+
+func (p *StructBuilder) parseFieldStruct(subName string, column *int, sentry int) (field reflect.StructField, err error) {
+	var fs []reflect.StructField
+	var sfield reflect.StructField
+	var parentHdrLen = p.StructTailIdx(p.layerDesc[*column], subName)
+	var prevSubName = ""
+
+	for j := *column; j < sentry; {
+		sfield, err = p.parseField(parentHdrLen, &j, &prevSubName)
+		if err != nil {
+			return field, err
+		}
+		fs = append(fs, sfield)
+	}
+	subStruct := reflect.StructOf(fs)
+	field = reflect.StructField{
+		Type: subStruct,
+		Name: cmn.CamelName(subName),
+	}
+	*column = sentry
+	return field, nil
+}
+
+func (p *StructBuilder) SliceTailIdx(name string, subTypeName string) int {
+	fullSubName := fmt.Sprintf("[%v]", subTypeName)
+	idx := strings.Index(name, fullSubName)
+	return idx + len(fullSubName) + 2
+}
+
+func (p *StructBuilder) MapTailIdx(name string, subTypeName string) int {
+	fullSubName := fmt.Sprintf("{%v}", subTypeName)
+	idx := strings.Index(name, fullSubName)
+	return idx + len(fullSubName) + 2
+}
+
+// 找到子类型尾巴
+func (p *StructBuilder) StructTailIdx(name string, subTypeName string) int {
+	fullSubName := fmt.Sprintf("<%v>", subTypeName)
+	idx := strings.Index(name, fullSubName)
+	return idx + len(fullSubName)
 }

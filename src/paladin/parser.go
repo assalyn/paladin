@@ -257,14 +257,19 @@ func (p *Parser) swapEnumField(origin [][]string, field string, swapTable map[st
 				continue
 			}
 			if origin[rowIdx][column] == "NULL" {
-				newValue = "NULL"
-			} else {
-				newValue, ok = swapTable[origin[rowIdx][column]]
-				if ok == false {
-					plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
-					err = cmn.ErrFail
-					continue
-				}
+				continue
+			}
+			// 原本就已经是数字了，不需要枚举
+			_, e := strconv.ParseInt(origin[rowIdx][column], 10, 64)
+			if e == nil {
+				continue
+			}
+
+			newValue, ok = swapTable[origin[rowIdx][column]]
+			if ok == false {
+				plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
+				err = cmn.ErrFail
+				continue
 			}
 			origin[rowIdx][column] = newValue
 		}
@@ -283,7 +288,6 @@ func (p *Parser) swapEnumFieldMultiTable(origin [][]string, field string, swapTa
 		}
 
 		for rowIdx := 0; rowIdx < len(origin); rowIdx++ {
-		NextRowId:
 			// 前ignoreLine行是结构，不替换
 			if rowIdx < conf.Cfg.IgnoreLine {
 				continue
@@ -308,6 +312,7 @@ func (p *Parser) swapEnumFieldMultiTable(origin [][]string, field string, swapTa
 
 			plog.Errorf("枚举值%v不存在 第%d行第%d列\n", origin[rowIdx][column], rowIdx, column)
 			err = cmn.ErrFail
+		NextRowId:
 		}
 	}
 	return err

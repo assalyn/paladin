@@ -28,10 +28,23 @@ func NewRowReader(header [][]string, row []string) *RowReader {
 
 // 解析数据. 不支持乱序读取
 func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Value) (value reflect.Value, err error) {
+	if p.col >= len(p.row) {
+		return value, cmn.ErrEOF
+	}
 	switch field.Kind() {
 	case reflect.Struct:
 		for i := 0; i < field.NumField(); i++ {
-			p.ReadField(t.Field(i).Name, t.Field(i).Type, field.Field(i))
+			_, err = p.ReadField(t.Field(i).Name, t.Field(i).Type, field.Field(i))
+			if err == nil {
+				// 什么都不做
+			} else if err == cmn.ErrSkip || err == cmn.ErrNull {
+				continue
+			} else if err == cmn.ErrEOF {
+				break
+			} else {
+				plog.Error("读取数据错误", err)
+				return value, err
+			}
 		}
 		return field, nil
 
@@ -57,9 +70,19 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 	case reflect.Slice:
 		var elemArray []reflect.Value
 		for {
+			originCol := p.col
 			elemValue, err := p.readSliceValue(fieldName, t.Elem())
 			if err == nil {
-				elemArray = append(elemArray, elemValue)
+				// allNull时不添加
+				allNull := true
+				for i := originCol; i < p.col; i++ {
+					if p.row[i] != "NULL" {
+						allNull = false
+					}
+				}
+				if !allNull {
+					elemArray = append(elemArray, elemValue)
+				}
 			} else if err == cmn.ErrEOF {
 				break
 			} else if err == cmn.ErrNull {
@@ -73,38 +96,37 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 		for i := 0; i < len(elemArray); i++ {
 			value.Index(i).Set(elemArray[i])
 		}
+		//fmt.Printf("ReadField return: %v %#v\n", fieldName, value)
 		return value, nil
 
 	default:
-		p.assignMember(field)
+		if err = p.assignMember(field); err != nil {
+			return field, err
+		}
+		return field, nil
 	}
-	return field, nil
 }
 
+// 内部还可能是复杂结构啊...比如slice, map
 func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (reflect.Value, error) {
 	value := reflect.New(elemType).Elem()
 	if p.col >= len(p.row) {
 		return value, cmn.ErrEOF
 	}
 	if elemType.Kind() == reflect.Struct {
-		allNull := true
 		for i := 0; i < value.NumField(); i++ {
-			if p.row[p.col+i] != "NULL" {
-				allNull = false
-				break
-			}
-		}
-		if allNull {
-			// 全部成员都为NULL时，代表这个slice没数据
-			p.col += value.NumField()
-			return value, cmn.ErrNull
-		}
-		for i := 0; i < value.NumField(); i++ {
-			// 读不出来了
 			if p.matchSliceDesc(sliceName) == false {
 				return value, cmn.ErrEOF
 			}
-			if err := p.assignMember(value.Field(i)); err != nil {
+			v, err := p.ReadField(elemType.Field(i).Name, elemType.Field(i).Type, value.Field(i))
+			if err == nil {
+				value.Field(i).Set(v)
+			} else if err == cmn.ErrSkip || err == cmn.ErrNull {
+				continue
+			} else if err == cmn.ErrEOF {
+				break
+			} else {
+				plog.Error("读取数据错误", err)
 				return value, err
 			}
 		}
@@ -152,18 +174,6 @@ func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key ref
 func (p *RowReader) assignMember(elem reflect.Value) error {
 	col := p.col
 	p.col++
-	defer func() {
-		switch err := recover().(type) {
-		case nil:
-
-		case error:
-			plog.Errorf("读取%d列数据时发生错误%v\n", col, err)
-
-		default:
-			plog.Errorf("读取%d列数据时发生错误%v\n", col, err)
-		}
-	}()
-
 	if p.row[col] == "NULL" {
 		return cmn.ErrNull
 	}
@@ -173,7 +183,7 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 		value, err := strconv.ParseInt(p.row[col], 10, 64)
 		if err != nil {
 			plog.Errorf("错误的INT数值%s, 第%d列\n", p.row[col], col)
-			return cmn.ErrNull
+			return cmn.ErrFail
 		}
 		elem.SetInt(value)
 
@@ -181,7 +191,7 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 		value, err := strconv.ParseUint(p.row[col], 10, 64)
 		if err != nil {
 			plog.Errorf("错误的UINT数值%s, 第%d列\n", p.row[col], col)
-			return cmn.ErrNull
+			return cmn.ErrFail
 		}
 		elem.SetUint(value)
 
@@ -192,7 +202,7 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 		value, err := strconv.ParseFloat(p.row[col], 64)
 		if err != nil {
 			plog.Errorf("错误的float64数值%s, 第%d列\n", p.row[col], col)
-			return cmn.ErrNull
+			return cmn.ErrFail
 		}
 		elem.SetFloat(value)
 	}
@@ -200,11 +210,13 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 }
 
 // 是否匹配 [rate]#xxx 或
+// todo 有缺陷，在解析子slice时，没办法区分上级。比如[cast]#1[effect]#1和[cast]#2[effect]#1
 func (p *RowReader) matchSliceDesc(sliceName string) bool {
 	if p.col >= len(p.row) {
 		return false
 	}
-	matched, _ := regexp.Match(fmt.Sprintf("(?i:^\\[%s\\])", sliceName), []byte(p.desc[p.col]))
+	curr := p.desc[p.col]
+	matched, _ := regexp.Match(fmt.Sprintf("(?i:\\[%s\\])", sliceName), []byte(curr))
 	return matched
 }
 
@@ -213,6 +225,6 @@ func (p *RowReader) matchMapDesc(dictName string) bool {
 	if p.col >= len(p.row) {
 		return false
 	}
-	matched, _ := regexp.Match(fmt.Sprintf("(?i:^\\{%s\\})", dictName), []byte(p.desc[p.col]))
+	matched, _ := regexp.Match(fmt.Sprintf("(?i:\\{%s\\})", dictName), []byte(p.desc[p.col]))
 	return matched
 }

@@ -27,7 +27,7 @@ func main() {
 	fmt.Printf("%#v\n", builder.StructType)
 	builder.CreateInstance()
 
-	coder := paladin.NewGoCodeBuilder("AAA")
+	coder := paladin.NewGoCodeBuilder("AAA", "", "")
 	coder.DebugType(builder.StructType, "AAA")
 }
 
@@ -221,11 +221,8 @@ func (p *TestBuilder) layerType(layerDesc string) (subName string, subType strin
 		return cleanStr[1 : len(cleanStr)-1], "slice"
 	} else if cleanStr[0] == '{' && cleanStr[len(cleanStr)-1] == '}' {
 		return cleanStr[1 : len(cleanStr)-1], "map"
+	} else if cleanStr[0] == '<' && cleanStr[len(cleanStr)-1] == '>' {
+		return cleanStr[1 : len(cleanStr)-1], "struct"
 	}
-	matched, _ := regexp.Match("[a-zA-Z0-9_.]*", []byte(cleanStr))
-	if matched {
-		return cleanStr, "struct"
-	} else {
-		return "", "invalid"
-	}
+	return "", "invalid"
 }
