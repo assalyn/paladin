@@ -52,9 +52,20 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 		// 获取一簇一簇的数据，然后一个个赋值
 		value = reflect.MakeMap(t)
 		for {
+			originCol := p.col
 			key, elemValue, err := p.readMapValue(fieldName, t.Elem())
 			if err == nil {
-				value.SetMapIndex(key, elemValue)
+				// allNull时不添加
+				allNull := true
+				for i := originCol; i < p.col; i++ {
+					if p.row[i] != "NULL" {
+						allNull = false
+						break
+					}
+				}
+				if !allNull {
+					value.SetMapIndex(key, elemValue)
+				}
 			} else if err == cmn.ErrEOF {
 				break
 			} else if err == cmn.ErrNull {
@@ -78,6 +89,7 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 				for i := originCol; i < p.col; i++ {
 					if p.row[i] != "NULL" {
 						allNull = false
+						break
 					}
 				}
 				if !allNull {
@@ -143,18 +155,23 @@ func (p *RowReader) readSliceValue(sliceName string, elemType reflect.Type) (ref
 
 func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key reflect.Value, value reflect.Value, err error) {
 	value = reflect.New(elemType).Elem()
+	if p.col >= len(p.row) {
+		return key, value, cmn.ErrEOF
+	}
 	if elemType.Kind() == reflect.Struct {
 		for i := 0; i < value.NumField(); i++ {
-			// 这个数据不是以前那个map结构了
 			if p.matchMapDesc(mapName) == false {
 				return key, value, cmn.ErrEOF
 			}
-			// 键值为NULL时过滤掉这条map数据
-			if i == 0 && p.row[p.col] == "NULL" {
-				p.col += value.NumField()
-				return key, value, cmn.ErrNull
-			}
-			if err := p.assignMember(value.Field(i)); err != nil {
+			v, err := p.ReadField(elemType.Field(i).Name, elemType.Field(i).Type, value.Field(i))
+			if err == nil {
+				value.Field(i).Set(v)
+			} else if err == cmn.ErrSkip || err == cmn.ErrNull {
+				continue
+			} else if err == cmn.ErrEOF {
+				break
+			} else {
+				plog.Error("读取数据错误", err)
 				return key, value, err
 			}
 		}
@@ -215,8 +232,7 @@ func (p *RowReader) matchSliceDesc(sliceName string) bool {
 	if p.col >= len(p.row) {
 		return false
 	}
-	curr := p.desc[p.col]
-	matched, _ := regexp.Match(fmt.Sprintf("(?i:\\[%s\\])", sliceName), []byte(curr))
+	matched, _ := regexp.Match(fmt.Sprintf("(?i:\\[%s\\])", sliceName), []byte(p.desc[p.col]))
 	return matched
 }
 
