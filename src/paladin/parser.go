@@ -210,13 +210,17 @@ func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 func (p *Parser) swapEnum(origin [][]string, enumItems []conf.EnumItem) error {
 	for _, enumItem := range enumItems {
 		if enumItem.Table == "enum" {
-			// 枚举表替换
-			swapTable := p.EnumSwapDict[enumItem.Sheet]
-			if swapTable == nil {
-				plog.Errorf("枚举替换子表%v不存在!!\n", enumItem.Sheet)
-				return cmn.ErrNotExist
+			tokens := strings.Split(enumItem.Sheet, ",")
+			swapTableList := make([]map[string]string, 0, len(tokens))
+			for _, sheet := range tokens {
+				swapTable := p.EnumSwapDict[sheet]
+				if swapTable == nil {
+					plog.Errorf("enum子表%v不存在!!\n", sheet)
+					return cmn.ErrNotExist
+				}
+				swapTableList = append(swapTableList, swapTable)
 			}
-			if err := p.swapEnumField(origin, enumItem.Field, swapTable); err != nil {
+			if err := p.swapEnumFieldMultiTable(origin, enumItem.Field, swapTableList); err != nil {
 				return err
 			}
 		} else {
