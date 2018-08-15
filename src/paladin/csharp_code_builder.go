@@ -33,6 +33,7 @@ func (p *CsharpCodeBuilder) GenStruct(obj interface{}) {
 }
 
 func (p *CsharpCodeBuilder) GenStructWithName(obj interface{}, structName string) {
+	p.file.Using("using System;\n")
 	p.file.Using("using System.Collections.Generic;\n")
 	p.file.Namespace("Dbc")
 

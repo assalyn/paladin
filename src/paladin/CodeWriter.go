@@ -159,6 +159,7 @@ func (p *CodeWriterStruct) AddSlice(typeName string, fieldName string) {
 
 // 缩进后面再弄吧
 func (p *CodeWriterStruct) Save() {
+	p.owner.writeLine(fmt.Sprintf("\n%s[Serializable]", p.prefix))                    // 写入序列化头
 	p.owner.writeLine(fmt.Sprintf("\n%spublic class %s {\n", p.prefix, p.structName)) // 写入struct头
 	for _, field := range p.fields {
 		switch field.fieldEnum {
