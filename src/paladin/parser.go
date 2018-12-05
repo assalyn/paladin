@@ -199,9 +199,11 @@ func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 		}
 		// ...其他展开
 
-		data := p.createStruct(rows)
 		// 创建数据结构, 赋值
-		p.mergeMap(totalStructs, data)
+		data, err := p.createStruct(rows)
+		if err == nil {
+			p.mergeMap(totalStructs, data)
+		}
 	}
 	p.Output[tableName] = totalStructs
 }
@@ -347,14 +349,16 @@ func (p *Parser) swapLocale(origin [][]string, LocaleItems []conf.LocaleItem, lo
 }
 
 // 创建数据结构, map->struct, id作为索引
-func (p *Parser) createStruct(rows [][]string) map[int]interface{} {
+func (p *Parser) createStruct(rows [][]string) (map[int]interface{}, error) {
 	data := make(map[int]interface{})
 	if len(rows) < conf.Cfg.IgnoreLine {
 		plog.Errorf("错误xlsx数据格式，表头只有%v行，不足%v行\n", len(rows), conf.Cfg.IgnoreLine)
-		return data
+		return nil, cmn.ErrNull
 	}
 	builder := NewStructBuilder(rows[:conf.Cfg.IgnoreLine])
-	builder.BuildStruct()
+	if err := builder.BuildStruct(); err != nil {
+		return nil, err
+	}
 	//b := NewGoCodeBuilder("", "", "")
 	//b.DebugType(builder.StructType, "")
 	for rowIdx, row := range rows {
@@ -368,7 +372,7 @@ func (p *Parser) createStruct(rows [][]string) map[int]interface{} {
 		}
 		data[id] = value
 	}
-	return data
+	return data, nil
 }
 
 func (p *Parser) outputJson() {

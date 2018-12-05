@@ -33,7 +33,7 @@ func NewStructBuilder(rows [][]string) *StructBuilder {
 	return builder
 }
 
-func (p *StructBuilder) BuildStruct() {
+func (p *StructBuilder) BuildStruct() error {
 	fields := make([]reflect.StructField, 0, 8)
 	subName := ""
 	column := 0
@@ -46,11 +46,12 @@ func (p *StructBuilder) BuildStruct() {
 			} else {
 				plog.Error("错误的数据结构", err)
 			}
-			return
+			return err
 		}
 		fields = append(fields, field)
 	}
 	p.StructType = reflect.StructOf(fields)
+	return nil
 }
 
 // 根据一行数据创建实例, 默认第一列是id
@@ -216,6 +217,10 @@ func (p *StructBuilder) parseFieldSlice(subName string, column *int, sentry int)
 		Type: sliceStruct,
 		Name: cmn.CamelName(subName),
 	}
+	if strings.EqualFold(field.Name, subName) == false {
+		plog.Error("slice只能使用Camel命名, ", subName, "!=", field.Name)
+		return field, cmn.ErrEOF
+	}
 	*column = sentry
 	return field, nil
 }
@@ -243,6 +248,10 @@ func (p *StructBuilder) parseFieldMap(subName string, column *int, sentry int) (
 	field = reflect.StructField{
 		Type: mapStruct,
 		Name: cmn.CamelName(subName),
+	}
+	if strings.EqualFold(field.Name, subName) == false {
+		plog.Error("map只能使用Camel命名, ", subName, "!=", field.Name)
+		return field, cmn.ErrEOF
 	}
 	*column = sentry
 	return field, nil
