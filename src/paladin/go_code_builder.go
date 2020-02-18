@@ -174,8 +174,12 @@ func (p *GoCodeBuilder) TypeToJenStatement(t reflect.Type) *jen.Statement {
 	case reflect.Bool:
 		return jen.Bool()
 
-	case reflect.Int:
+	case reflect.Int,
+		reflect.Int64:
 		return jen.Int64()
+
+	case reflect.Int32:
+		return jen.Int32()
 
 	case reflect.String:
 		return jen.String()
@@ -202,8 +206,12 @@ func (p *GoCodeBuilder) AppendKeyword(code *jen.Statement, t reflect.Type) *jen.
 	case reflect.Float64:
 		return code.Float64()
 
-	case reflect.Int:
+	case reflect.Int,
+		reflect.Int64:
 		return code.Int64()
+
+	case reflect.Int32:
+		return code.Int32()
 
 	case reflect.String:
 		return code.String()

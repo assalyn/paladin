@@ -121,8 +121,12 @@ func (p *CsharpCodeBuilder) TypeToJenStatement(t reflect.Type) *jen.Statement {
 	case reflect.Bool:
 		return jen.Bool()
 
-	case reflect.Int:
+	case reflect.Int,
+		reflect.Int64:
 		return jen.Int64()
+
+	case reflect.Int32:
+		return jen.Int()
 
 	case reflect.String:
 		return jen.String()
@@ -149,8 +153,12 @@ func (p *CsharpCodeBuilder) TypeName(t reflect.Type) string {
 	case reflect.Float64:
 		return "double"
 
-	case reflect.Int:
+	case reflect.Int,
+		reflect.Int64:
 		return "long"
+
+	case reflect.Int32:
+		return "int"
 
 	case reflect.String:
 		return "string"
