@@ -196,7 +196,9 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 	}
 
 	switch elem.Type().Kind() {
-	case reflect.Int:
+	case reflect.Int,
+		reflect.Int32,
+		reflect.Int64:
 		value, err := strconv.ParseInt(p.row[col], 10, 64)
 		if err != nil {
 			plog.Errorf("错误的INT数值%s, 第%d列\n", p.row[col], col)

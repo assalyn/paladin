@@ -162,6 +162,9 @@ func (p *StructBuilder) memberType(rowIdx int, column int) reflect.Type {
 	case "INT32":
 		return reflect.TypeOf(int32(0))
 
+	case "INT64":
+		return reflect.TypeOf(int64(0))
+
 	case "STRING":
 		return reflect.TypeOf("")
 
