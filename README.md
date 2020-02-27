@@ -24,6 +24,9 @@ xlsx为核心，代码全解耦，以策划友好性为第一位
 2. 多层struct是允许的，但是不允许多层struct的member分散出现，也不允许struct内部再跟slice或map
 3. 做slice和map时，要求使用的名称为单一字符串如[awake]或驼峰字符串如[awakeMaterial]否则读取会失败
 
-# TODO
-1. 要实现多表联查，而不是单单一个枚举表。比如任务表需要物品表的名称，那不可能全部弄到枚举表里。而且应该要允许多表查询
-比如 任务奖励可能是物品、装备、药草、经验。反正可能是任何东西。强行把这么多东西全归类到物品对逻辑来说不合适。
+# 表达式
+* \<struct> 尖括号用于表达子struct
+* [slice] 方括号用于表达slice
+* {map} 大括号用于表达map
+* \- 横杠用于略去解析（多用于备注，说明表单内容，但不输出）
+* 同一slice/map的不同member，使用[slice]#1 字段描述，比如slice类型有type和value两个字段，则这两个字段的desc栏都填[slice]#1, 第二个value的desc栏填[slice]#2

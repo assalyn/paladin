@@ -31,6 +31,9 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 	if p.col >= len(p.row) {
 		return value, cmn.ErrEOF
 	}
+	for p.desc[p.col] == "-" { // 略去省略字段
+		p.col++
+	}
 	switch field.Kind() {
 	case reflect.Struct:
 		for i := 0; i < field.NumField(); i++ {

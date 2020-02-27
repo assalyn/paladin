@@ -45,8 +45,8 @@ func (p *StructBuilder) BuildStruct() error {
 				continue
 			} else {
 				plog.Error("错误的数据结构", err)
+				return err
 			}
-			return err
 		}
 		fields = append(fields, field)
 	}
@@ -82,10 +82,14 @@ func (p *StructBuilder) CreateInstance(row []string) (id int, value interface{},
 	return id, structValue.Interface(), nil
 }
 
-// [XXX]数组结构; {XXX}map结构; XXX内部数据结构
+// [XXX]数组结构; {XXX}map结构; <XXX>内部数据结构
 func (p *StructBuilder) parseField(descSkip int, column *int, prevSubName *string) (field reflect.StructField, err error) {
 	//fmt.Printf("parseField descSkip=%v column=%v\n", descSkip, *column)
 	currDesc := p.layerDesc[*column][descSkip:]
+	if currDesc == "-" {
+		*column++
+		return field, cmn.ErrSkip
+	}
 	if currDesc == "" {
 		field = reflect.StructField{
 			Type: p.memberType(0, *column),
@@ -240,7 +244,11 @@ func (p *StructBuilder) parseFieldMap(subName string, column *int, sentry int) (
 	for j := *column; j < sentry; {
 		sfield, err = p.parseField(parentHdrLen, &j, &prevSubName)
 		if err != nil {
-			return field, err
+			if err == cmn.ErrSkip {
+				continue
+			} else {
+				return field, err
+			}
 		}
 		fs = append(fs, sfield)
 	}
@@ -272,7 +280,11 @@ func (p *StructBuilder) parseFieldStruct(subName string, column *int, sentry int
 	for j := *column; j < sentry; {
 		sfield, err = p.parseField(parentHdrLen, &j, &prevSubName)
 		if err != nil {
-			return field, err
+			if err == cmn.ErrSkip {
+				continue
+			} else {
+				return field, err
+			}
 		}
 		fs = append(fs, sfield)
 	}
