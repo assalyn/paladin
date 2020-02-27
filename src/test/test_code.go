@@ -187,6 +187,9 @@ func (p *TestBuilder) parseField(column *int) (field reflect.StructField, err er
 func (p *TestBuilder) memberType(typeName string) reflect.Type {
 	typeName = strings.ToUpper(typeName)
 	switch typeName {
+	case "BOOL":
+		return reflect.TypeOf(true)
+
 	case "UINT":
 		return reflect.TypeOf(uint(0))
 

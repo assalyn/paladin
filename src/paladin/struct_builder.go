@@ -157,6 +157,9 @@ func (p *StructBuilder) getFieldCluster(startCol int) (endCol int) {
 func (p *StructBuilder) memberType(rowIdx int, column int) reflect.Type {
 	typeName := strings.ToUpper(p.rows[rowIdx][column])
 	switch typeName {
+	case "BOOL":
+		return reflect.TypeOf(true)
+
 	case "UINT":
 		return reflect.TypeOf(uint(0))
 

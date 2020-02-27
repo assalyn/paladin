@@ -199,6 +199,14 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 	}
 
 	switch elem.Type().Kind() {
+	case reflect.Bool:
+		value, err := strconv.ParseBool(p.row[col])
+		if err != nil {
+			plog.Errorf("错误的BOOL数值%s, 第%d列\n", p.row[col], col)
+			return cmn.ErrFail
+		}
+		elem.SetBool(value)
+
 	case reflect.Int,
 		reflect.Int32,
 		reflect.Int64:
