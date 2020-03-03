@@ -228,6 +228,14 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 	case reflect.String:
 		elem.SetString(p.row[col])
 
+	case reflect.Float32:
+		value, err := strconv.ParseFloat(p.row[col], 32)
+		if err != nil {
+			plog.Errorf("错误的float64数值%s, 第%d列\n", p.row[col], col)
+			return cmn.ErrFail
+		}
+		elem.SetFloat(value)
+
 	case reflect.Float64:
 		value, err := strconv.ParseFloat(p.row[col], 64)
 		if err != nil {
@@ -235,6 +243,9 @@ func (p *RowReader) assignMember(elem reflect.Value) error {
 			return cmn.ErrFail
 		}
 		elem.SetFloat(value)
+
+	default:
+		plog.Error("不能解析的数据类型", elem.Type().Kind().String())
 	}
 	return nil
 }

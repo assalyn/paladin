@@ -175,6 +175,9 @@ func (p *StructBuilder) memberType(rowIdx int, column int) reflect.Type {
 	case "STRING":
 		return reflect.TypeOf("")
 
+	case "FLOAT":
+		return reflect.TypeOf(float32(0))
+
 	case "DOUBLE":
 		return reflect.TypeOf(float64(0))
 
