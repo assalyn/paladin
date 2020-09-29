@@ -1,7 +1,7 @@
 package cmn
 
 import (
-	"frm/plog"
+	"assalyn/paladin/frm/plog"
 	"regexp"
 )
 

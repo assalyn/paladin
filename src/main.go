@@ -1,70 +1,32 @@
 package main
 
 import (
-	"os"
-	"time"
+	"assalyn/paladin/conf"
+	"assalyn/paladin/frm/plog"
+	"assalyn/paladin/paladin"
+	"flag"
+)
 
-	"frm/plog"
-
-	"conf"
-	"paladin"
-
-	"gopkg.in/urfave/cli.v1"
+var (
+	confFile = flag.String("config", "config.toml", "-config config.toml")
+	output = flag.String("output", "data", "output directory")
+	stub = flag.String("stub", "stub", "generated stub code files directory")
+	locale = flag.String("locale", "locale", "generated locale files directory")
+	golang = flag.Bool("go", false, "generate golang stub code")
+	csharp = flag.Bool("cs", false, "generate csharp stub code")
 )
 
 // 参数解析
 func main() {
-	app := cli.NewApp()
-	app.Name = "test"
-	app.Usage = "unify test suit"
-	app.Version = "0.4.7"
-	app.Compiled = time.Now()
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "config,c",
-			Usage: "config file",
-			Value: "config.toml",
-		},
-		cli.StringFlag{
-			Name:  "output,o",
-			Usage: "output directory",
-			Value: "data",
-		},
-		cli.StringFlag{
-			Name:  "stub,s",
-			Usage: "generated stub code files directory",
-			Value: "stub",
-		},
-		cli.StringFlag{
-			Name:  "locale,l",
-			Usage: "generated locale files directory",
-			Value: "locale",
-		},
-		cli.BoolFlag{
-			Name:  "golang,go",
-			Usage: "generate golang stub code",
-		},
-		cli.BoolFlag{
-			Name:  "csharp,cs",
-			Usage: "generate csharp stub code",
-		},
-	}
-	app.Action = func(c *cli.Context) error {
-		return actualMain(c)
-	}
-	app.Run(os.Args)
-}
+	flag.Parse()
 
-// 实际main函数
-func actualMain(c *cli.Context) error {
 	// 加载配置
-	conf.Init(c.String("config"))
+	conf.Init(*confFile)
 
 	// 加载log
 	plog.InitLog("app.log", plog.LOG_TRACE)
 
 	// 启动解析器
-	parser := paladin.NewParser(c.String("output"), c.String("stub"), c.String("locale"), c.Bool("golang"), c.Bool("csharp"))
+	parser := paladin.NewParser(*output, *stub, *locale, *golang, *csharp)
 	parser.Start()
-	return nil
 }

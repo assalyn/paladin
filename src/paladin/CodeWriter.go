@@ -2,7 +2,7 @@ package paladin
 
 import (
 	"fmt"
-	"frm/plog"
+	"assalyn/paladin/frm/plog"
 	"os"
 )
 

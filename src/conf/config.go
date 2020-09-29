@@ -1,10 +1,8 @@
 package conf
 
 import (
-	"frm/plog"
-
+	"assalyn/paladin/frm/plog"
 	"fmt"
-
 	"github.com/BurntSushi/toml"
 )
 

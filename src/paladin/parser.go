@@ -1,10 +1,10 @@
 package paladin
 
 import (
-	"cmn"
-	"conf"
+	"assalyn/paladin/cmn"
+	"assalyn/paladin/conf"
+	"assalyn/paladin/frm/plog"
 	"encoding/json"
-	"frm/plog"
 	"os"
 	"strconv"
 	"strings"

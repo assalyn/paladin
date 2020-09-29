@@ -1,10 +1,10 @@
 package main
 
 import (
-	"cmn"
+	"assalyn/paladin/cmn"
+	"assalyn/paladin/frm/plog"
 	"encoding/json"
 	"fmt"
-	"frm/plog"
 	"reflect"
 )
 

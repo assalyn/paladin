@@ -10,13 +10,12 @@ package plog
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
-
-	"github.com/fatih/color"
 )
 
 var logLevel LogLevel = LOG_INFO

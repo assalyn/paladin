@@ -1,9 +1,9 @@
 package paladin
 
 import (
-	"cmn"
+	"assalyn/paladin/cmn"
+	"assalyn/paladin/frm/plog"
 	"fmt"
-	"frm/plog"
 	"reflect"
 	"regexp"
 	"strconv"

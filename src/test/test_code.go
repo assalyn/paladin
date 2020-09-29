@@ -1,20 +1,13 @@
 package main
 
 import (
-	"frm/plog"
-
-	"cmn"
-	"reflect"
-
-	"strings"
-
+	"assalyn/paladin/frm/plog"
+	"assalyn/paladin/paladin"
 	"fmt"
-
-	"regexp"
-
-	"paladin"
-
 	"github.com/tealeg/xlsx"
+	"reflect"
+	"regexp"
+	"strings"
 )
 
 func main() {

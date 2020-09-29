@@ -2,7 +2,7 @@ package paladin
 
 // 中间数据初始化代码
 
-import "frm/plog"
+import "assalyn/paladin/frm/plog"
 
 // 构建枚举替换结构
 func (p *Parser) structEnumSwapMap() {
