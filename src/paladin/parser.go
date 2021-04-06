@@ -370,6 +370,10 @@ func (p *Parser) createStruct(rows [][]string) (map[int]interface{}, error) {
 			plog.Errorf("解析第%d行数据失败，错误%v\n", rowIdx, err)
 			continue
 		}
+		if data[id] != nil {
+			plog.Errorf("解析第%d行数据ID重复！！ id = %d\n", rowIdx, id)
+			continue
+		}
 		data[id] = value
 	}
 	return data, nil
