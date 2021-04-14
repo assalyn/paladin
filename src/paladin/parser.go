@@ -91,7 +91,7 @@ func (p *Parser) loadFiles() {
 	reader = NewXlsxReader(false, false)
 	localeInfo, err := reader.Read("locale", conf.Cfg.LocaleFile, nil, nil)
 	if err != nil {
-		plog.Panic("读取多语言表失败!!", err)
+		plog.Info("无多语言表，不进行多语言处理")
 	}
 	p.Locale = localeInfo
 }
