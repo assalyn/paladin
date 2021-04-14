@@ -31,6 +31,9 @@ func (p *Parser) structParamUnfoldMap() {
 
 // 构建多语言替换结构 : locale -> field -> content
 func (p *Parser) structLocaleSwapMap() {
+	if p.Locale == nil {
+		return
+	}
 	for subTable, rows := range p.Locale.Rows {
 		localeSwapTable := make(map[string]map[string]string)
 		// rows[1] 是语言描述栏. cn, en

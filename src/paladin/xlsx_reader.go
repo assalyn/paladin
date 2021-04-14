@@ -37,7 +37,6 @@ func NewXlsxReader(autoId bool, horizontal bool) *XlsxReader {
 func (p *XlsxReader) Read(tableName string, xlsxFile string, sheets []string, enums []conf.EnumItem) (*XlsxInfo, error) {
 	xlsx, err := excelize.OpenFile(xlsxFile)
 	if err != nil {
-		plog.Errorf("fail to read %s!! %v\n", xlsxFile, err)
 		return nil, err
 	}
 
