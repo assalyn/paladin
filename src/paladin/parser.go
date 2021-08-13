@@ -387,11 +387,20 @@ func (p *Parser) outputJson() {
 			plog.Error(tableName, "生成文件失败", err)
 			continue
 		}
-		encoder := json.NewEncoder(outputFile)
-		if err = encoder.Encode(outputData); err != nil {
-			plog.Error(tableName, "导出json失败", err)
+		bs, err := json.Marshal(outputData)
+		if err != nil {
+			plog.Error(tableName, "json.Marshal fail!!", err)
 			continue
 		}
+		if _, err = outputFile.Write(bs); err != nil {
+			plog.Error(tableName, "fail to file.Write!!", err)
+			continue
+		}
+		//encoder := json.NewEncoder(outputFile) 这种编码会导致输出unix文件
+		//if err = encoder.Encode(outputData); err != nil {
+		//	plog.Error(tableName, "导出json失败", err)
+		//	continue
+		//}
 	}
 
 }
