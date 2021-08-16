@@ -1,6 +1,7 @@
 package main
 
 import (
+	"assalyn/paladin/cmn"
 	"assalyn/paladin/frm/plog"
 	"assalyn/paladin/paladin"
 	"fmt"
