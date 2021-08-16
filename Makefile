@@ -1,5 +1,7 @@
+.PHONY: build install
+
 build:
-	cd src && go build -o paladin.exe
+	cd src && go build -o ../build
 
 install:
 	cd src && go install
