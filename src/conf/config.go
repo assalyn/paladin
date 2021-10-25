@@ -2,8 +2,10 @@ package conf
 
 import (
 	"assalyn/paladin/frm/plog"
+	"encoding/json"
 	"fmt"
 	"github.com/BurntSushi/toml"
+	"os"
 )
 
 var Cfg *Config
@@ -44,6 +46,20 @@ func Init(confFile string) {
 		plog.Panic(err)
 	}
 	//show()
+}
+
+func ExportJson(filename string) {
+	bs, err := json.Marshal(Cfg)
+	if err != nil {
+		panic("invalid config file, export config.json failed!! " + err.Error())
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		panic("fail to create config.json!!" + err.Error())
+	}
+	if _, err = f.Write(bs); err != nil {
+		panic("fail to write config to json file!!" + err.Error())
+	}
 }
 
 func show() {
