@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"os"
+	"strings"
 )
 
 var Cfg *Config
@@ -24,9 +25,9 @@ type LocaleItem struct {
 type Table struct {
 	Workbook   string       // 工作簿
 	Sheet      []string     // 子表
-	AutoId     bool         // 自动id
+	AutoId     bool         // 自动id todo 未实现
 	Horizontal bool         // 是否水平解析
-	Singleton  bool         // 是否单独结构. 一般来说，只有全局配置是不需要map索引的
+	Output     []string     // 输出类型选项 json, cs, go. 默认全输出
 	Enums      []EnumItem   // 枚举替换
 	Locales    []LocaleItem // 多语言替换
 }
@@ -59,6 +60,30 @@ func ExportJson(filename string) {
 	}
 	if _, err = f.Write(bs); err != nil {
 		panic("fail to write config to json file!!" + err.Error())
+	}
+}
+
+var (
+	OutputJson = outputDelegate("json")
+	OutputGo   = outputDelegate("go")
+	OutputCs   = outputDelegate("cs")
+)
+
+func outputDelegate(express string) func(tableName string) bool {
+	return func(tableName string) bool {
+		tbl := Cfg.Tables[tableName]
+		if tbl == nil {
+			return false
+		}
+		if len(tbl.Output) == 0 {
+			return true
+		}
+		for _, regx := range tbl.Output {
+			if strings.ToLower(regx) == express {
+				return true
+			}
+		}
+		return false
 	}
 }
 

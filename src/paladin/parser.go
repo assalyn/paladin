@@ -20,7 +20,7 @@ type Parser struct {
 	EnumSwapDict    map[string]map[string]string            // 枚举替换表 子表->field->内容
 	ParamUnfoldDict map[string]map[string]string            // 参数展开表 子表->替换项->内容
 	LocaleSwapDict  map[string]map[string]map[string]string // 多语言替换表 子表->语言->field->内容
-	Output          map[string]map[int]interface{}          // 待输出的数据 字表->id->内容
+	Output          map[string]map[int]interface{}          // 待输出的数据 子表->id->内容
 
 	// 内部使用变量
 	outputDir string // 输出目录
@@ -262,7 +262,7 @@ func (p *Parser) swapEnumField(origin [][]string, field string, swapTable map[st
 			if rowIdx < conf.Cfg.IgnoreLine {
 				continue
 			}
-			if origin[rowIdx][column] == "NULL" {
+			if strings.ToUpper(origin[rowIdx][column]) == "NULL" {
 				continue
 			}
 			// 原本就已经是数字了，不需要枚举
@@ -299,7 +299,7 @@ func (p *Parser) swapEnumFieldMultiTable(origin [][]string, field string, swapTa
 				continue
 			}
 			// 原本就是NULL
-			if origin[rowIdx][column] == "NULL" {
+			if strings.ToUpper(origin[rowIdx][column]) == "NULL" {
 				continue
 			}
 			// 原本就已经是数字了，不需要枚举
@@ -382,6 +382,9 @@ func (p *Parser) createStruct(rows [][]string) (map[int]interface{}, error) {
 func (p *Parser) outputJson() {
 	// 导出数据文件
 	for tableName, outputData := range p.Output {
+		if conf.OutputJson(tableName) == false {
+			continue
+		}
 		outputFile, err := os.Create(p.outputDir + "/" + tableName + ".json")
 		if err != nil {
 			plog.Error(tableName, "生成文件失败", err)
@@ -420,6 +423,9 @@ func (p *Parser) mergeMap(origin map[int]interface{}, addMap map[int]interface{}
 func (p *Parser) genGolangStub(codeDir string) {
 	plog.Trace()
 	for fileName, data := range p.Output {
+		if conf.OutputGo(fileName) == false {
+			continue
+		}
 		for _, v := range data {
 			c := NewGoCodeBuilder(codeDir, p.outputDir, fileName)
 			c.GenStructWithName(v, fileName)
@@ -433,6 +439,9 @@ func (p *Parser) genGolangStub(codeDir string) {
 func (p *Parser) genCsharpStub(codeDir string) {
 	plog.Trace()
 	for fileName, data := range p.Output {
+		if conf.OutputCs(fileName) == false {
+			continue
+		}
 		for _, v := range data {
 			var csFileName = cmn.CamelName(fileName)
 			c := NewCsharpCodeBuilder(codeDir, p.outputDir, csFileName)

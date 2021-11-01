@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 type RowReader struct {
@@ -61,7 +62,7 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 				// allNull时不添加
 				allNull := true
 				for i := originCol; i < p.col; i++ {
-					if p.row[i] != "NULL" {
+					if strings.ToUpper(p.row[i]) != "NULL" {
 						allNull = false
 						break
 					}
@@ -90,7 +91,7 @@ func (p *RowReader) ReadField(fieldName string, t reflect.Type, field reflect.Va
 				// allNull时不添加
 				allNull := true
 				for i := originCol; i < p.col; i++ {
-					if p.row[i] != "NULL" {
+					if strings.ToUpper(p.row[i]) != "NULL" {
 						allNull = false
 						break
 					}
@@ -194,7 +195,7 @@ func (p *RowReader) readMapValue(mapName string, elemType reflect.Type) (key ref
 func (p *RowReader) assignMember(elem reflect.Value) error {
 	col := p.col
 	p.col++
-	if p.row[col] == "NULL" {
+	if strings.ToUpper(p.row[col]) == "NULL" {
 		return cmn.ErrNull
 	}
 
