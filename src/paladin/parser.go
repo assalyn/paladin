@@ -422,17 +422,24 @@ func (p *Parser) mergeMap(origin map[int]interface{}, addMap map[int]interface{}
 // 生成golang桩文件
 func (p *Parser) genGolangStub(codeDir string) {
 	plog.Trace()
+	LoadFuncNames := make([]string, 0, 16)
 	for fileName, data := range p.Output {
 		if conf.OutputGo(fileName) == false {
 			continue
 		}
 		for _, v := range data {
 			c := NewGoCodeBuilder(codeDir, p.outputDir, fileName)
-			c.GenStructWithName(v, fileName)
+			loadFuncName := c.GenStructWithName(v, fileName)
+			LoadFuncNames = append(LoadFuncNames, loadFuncName)
 			c.Output()
 			break
 		}
 	}
+	// 输出api.dbc.go提供公共接口
+	c := NewGoCodeBuilder(codeDir, p.outputDir, "init")
+	funcName := c.GenReloadAllFile(LoadFuncNames)
+	c.GenInit(funcName)
+	c.Output()
 }
 
 // 生成C#桩文件

@@ -29,7 +29,7 @@ func NewGoCodeBuilder(codeDir string, dataDir string, fileName string) *GoCodeBu
 	return c
 }
 
-func (p *GoCodeBuilder) GenStructWithName(obj interface{}, structName string) {
+func (p *GoCodeBuilder) GenStructWithName(obj interface{}, structName string) string {
 	p.structName = cmn.CamelName(structName)
 	t := reflect.TypeOf(obj)
 	for t.Kind() == reflect.Ptr {
@@ -39,7 +39,8 @@ func (p *GoCodeBuilder) GenStructWithName(obj interface{}, structName string) {
 	p.genValue()
 	p.genGet()
 	p.genGetAll()
-	p.genInit()
+	loadFuncName := p.genLoadFile()
+	return loadFuncName
 }
 
 func (p *GoCodeBuilder) GenType(t reflect.Type, structName string) {
@@ -51,7 +52,7 @@ func (p *GoCodeBuilder) GenType(t reflect.Type, structName string) {
 	p.genValue()
 	p.genGet()
 	p.genGetAll()
-	p.genInit()
+	p.genLoadFile()
 }
 
 // 这个代码问题还挺多的
@@ -134,8 +135,9 @@ func (p *GoCodeBuilder) genGetAll() {
 		plog.Error(err)
 	}
 */
-func (p *GoCodeBuilder) genInit() {
-	p.jfile.Func().Id("init").Params().Block(
+func (p *GoCodeBuilder) genLoadFile() string {
+	funcName := "LoadFile" + p.structName
+	p.jfile.Func().Id(funcName).Params().Block(
 		jen.List(jen.Id("file"), jen.Id("err")).Op(":=").Qual("os", "Open").Call(jen.Lit(p.dataDir+"/"+p.fileName+".json")),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to open!!"), jen.Id("err"))),
@@ -148,7 +150,29 @@ func (p *GoCodeBuilder) genInit() {
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to decode!!"), jen.Id("err"))),
 			jen.Return(),
 		),
+	).Line()
+	return funcName
+}
+
+// 生成init() { LoadFile(); }
+func (p *GoCodeBuilder) GenInit(loadFuncName string) {
+	p.jfile.Func().Id("init").Params().Block(
+		jen.Qual("", loadFuncName).Call(),
 	)
+}
+
+func (p *GoCodeBuilder) GenReloadAllFile(funcNames []string) string {
+	stmts := make([]jen.Code, 0, len(funcNames))
+	for _, name := range funcNames {
+		stmt := jen.Qual("", name).Call()
+		if stmt == nil {
+			continue
+		}
+		stmts = append(stmts, stmt)
+	}
+	funcName := "ReloadAllFile"
+	p.jfile.Func().Id(funcName).Params().Block(stmts...).Line()
+	return funcName
 }
 
 // 输出
