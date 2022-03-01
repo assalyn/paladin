@@ -165,10 +165,7 @@ func (p *GoCodeBuilder) GenInit(loadFuncName string) {
 func (p *GoCodeBuilder) GenReloadAllFile(funcNames []string) string {
 	stmts := make([]jen.Code, 0, len(funcNames))
 	sort.Slice(funcNames, func(i, j int) bool {
-		if funcNames[i] > funcNames[j] {
-			funcNames[i], funcNames[j] = funcNames[j], funcNames[i]
-		}
-		return true
+		return funcNames[i] < funcNames[j]
 	})
 	for _, name := range funcNames {
 		stmt := jen.Qual("", name).Call()
