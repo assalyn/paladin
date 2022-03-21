@@ -1,6 +1,7 @@
 package paladin
 
 import (
+	"assalyn/paladin/cmn"
 	"assalyn/paladin/conf"
 	"assalyn/paladin/frm/plog"
 	"github.com/360EntSecGroup-Skylar/excelize"
@@ -33,11 +34,65 @@ func NewXlsxReader(autoId bool, horizontal bool) *XlsxReader {
 	return p
 }
 
+func (p *XlsxReader) Check(xlsx *excelize.File, sheets []string) (err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			plog.Error("panic: ", err)
+		}
+	}()
+	if xlsx == nil {
+		plog.Error("xlsx == nil")
+		return cmn.ErrBadXlsx
+	}
+	sheetNames := make([]string, 0, 4)
+	for _, sheetName := range xlsx.GetSheetMap() {
+		if len(sheets) != 0 {
+			for _, paramSheet := range sheets {
+				if sheetName == paramSheet {
+					sheetNames = append(sheetNames, sheetName)
+					break
+				}
+			}
+		} else {
+			sheetNames = append(sheetNames, sheetName)
+		}
+	}
+	// 对所有的sheetNames检查结构, 检查name是否完全一致
+	if len(sheetNames) == 0 {
+		plog.Error("len(sheetNames) == 0")
+		return cmn.ErrBadXlsx
+	}
+	sheetsData := make([][][]string, 0, len(sheetNames))
+	for _, sheetName := range sheetNames {
+		rows := xlsx.GetRows(sheetName)
+		sheetsData = append(sheetsData, rows)
+	}
+	sentinelSheet := sheetsData[0]
+	if len(sentinelSheet) < 4 {
+		plog.Error("rows < 4")
+		return cmn.ErrBadXlsx
+	}
+	for sheetIdx := 1; sheetIdx < len(sheetNames); sheetIdx++ {
+		for row := 0; row < 4; row++ {
+			for col := 0; col < len(sentinelSheet[0]); col++ {
+				if sentinelSheet[row][col] != sheetsData[sheetIdx][row][col] {
+					plog.Errorf("子表格式不同!! %v[%v][%v] != %v[%v][%v]\n", sheetNames[sheetIdx], row, col, sheetNames[0], row, col)
+					err = cmn.ErrBadXlsx
+				}
+			}
+		}
+	}
+	return err
+}
+
 // 读取数据
 func (p *XlsxReader) Read(tableName string, xlsxFile string, sheets []string, enums []conf.EnumItem) (*XlsxInfo, error) {
 	xlsx, err := excelize.OpenFile(xlsxFile)
 	if err != nil {
 		return nil, err
+	}
+	if p.Check(xlsx, sheets) != nil {
+		return nil, cmn.ErrBadXlsx
 	}
 
 	info := NewXlsxInfo()
