@@ -23,6 +23,7 @@ xlsx为核心，代码全解耦，以策划友好性为第一位
 1. 不支持slice和map的多级结构. 后面只能接简单数据结构或单层struct
 2. 多层struct是允许的，但是不允许多层struct的member分散出现，也不允许struct内部再跟slice或map
 3. 做slice和map时，要求使用的名称为单一字符串如[awake]或驼峰字符串如[awakeMaterial]否则读取会失败
+4. enum.xlsx枚举表特殊，没有复杂结构, 因此第四行不需要留白，可存储数据
 
 # 表达式
 * \<struct> 尖括号用于表达子struct

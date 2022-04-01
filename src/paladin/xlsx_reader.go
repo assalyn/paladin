@@ -34,7 +34,7 @@ func NewXlsxReader(autoId bool, horizontal bool) *XlsxReader {
 	return p
 }
 
-func (p *XlsxReader) Check(xlsx *excelize.File, sheets []string) (err error) {
+func (p *XlsxReader) Check(tableName string, xlsx *excelize.File, sheets []string) (err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			plog.Error("panic: ", err)
@@ -74,6 +74,11 @@ func (p *XlsxReader) Check(xlsx *excelize.File, sheets []string) (err error) {
 	}
 	for sheetIdx := 1; sheetIdx < len(sheetNames); sheetIdx++ {
 		for row := 0; row < 4; row++ {
+			if row == 2 { // 第三行是说明字段，在不同的子表说明字段可能不同
+				continue
+			} else if row == 3 && tableName == "enum" { // 枚举表特殊，第四行不用来作为复杂结构
+				continue
+			}
 			for col := 0; col < len(sentinelSheet[0]); col++ {
 				if sentinelSheet[row][col] != sheetsData[sheetIdx][row][col] {
 					plog.Errorf("子表格式不同!! %v[%v][%v] != %v[%v][%v]\n", sheetNames[sheetIdx], row, col, sheetNames[0], row, col)
@@ -91,7 +96,7 @@ func (p *XlsxReader) Read(tableName string, xlsxFile string, sheets []string, en
 	if err != nil {
 		return nil, err
 	}
-	if p.Check(xlsx, sheets) != nil {
+	if p.Check(tableName, xlsx, sheets) != nil {
 		return nil, cmn.ErrBadXlsx
 	}
 
