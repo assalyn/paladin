@@ -23,13 +23,13 @@ type LocaleItem struct {
 }
 
 type Table struct {
-	Workbook   string       // 工作簿
-	Sheet      []string     // 子表
-	AutoId     bool         // 自动id todo 未实现
-	Horizontal bool         // 是否水平解析
-	Output     []string     // 输出类型选项 json, cs, go. 默认全输出
-	Enums      []EnumItem   // 枚举替换
-	Locales    []LocaleItem // 多语言替换
+	Workbook   string     // 工作簿
+	Sheet      []string   // 子表
+	AutoId     bool       // 自动id todo 未实现
+	Horizontal bool       // 是否水平解析
+	Output     []string   // 输出类型选项 json, cs, go. 默认全输出
+	Type       string     // 表类型 server_only; client_local_read
+	Enums      []EnumItem // 枚举替换
 }
 
 type Config struct {

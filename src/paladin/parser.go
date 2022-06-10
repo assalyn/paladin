@@ -201,6 +201,14 @@ func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 
 		// 创建数据结构, 赋值
 		data, err := p.createStruct(rows)
+		// id检查, id是不允许一样的
+		for _, otherTableDict := range p.Output {
+			for id := range otherTableDict {
+				if data[id] != nil {
+					plog.Error(tableName, "ID冲突 id=", id)
+				}
+			}
+		}
 		if err == nil {
 			p.mergeMap(totalStructs, data)
 		}
