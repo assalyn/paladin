@@ -60,7 +60,7 @@ func (p *Parser) Start() {
 	// 导出为json
 	p.output("json")
 
-	// 输出多语言文件
+	// deprecated 输出多语言文件, 这个部分好像不怎么样
 	p.outputLocale()
 
 	// 是否生成桩文件

@@ -67,17 +67,17 @@ func (p *GoCodeBuilder) genType(t reflect.Type, structName string, printPrefix s
 		case reflect.Struct:
 			subStruct := structName + subField.Name
 			p.genType(subField.Type, subStruct, printPrefix+"  ")
-			fields[i] = jen.Id(subField.Name).Id(subStruct)
+			fields[i] = jen.Id(subField.Name).Id(subStruct).Tag(map[string]string{"json": subField.Tag.Get("json")})
 
 		case reflect.Map:
 			elem := subField.Type.Elem()
 			if elem.Kind() == reflect.Struct {
 				mapSubStruct := structName + subField.Name
 				p.genType(elem, mapSubStruct, printPrefix+"  ")
-				fields[i] = jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())).Id(mapSubStruct)
+				fields[i] = jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())).Id(mapSubStruct).Tag(map[string]string{"json": subField.Tag.Get("json")})
 			} else {
 				// 常规类型 int, float, string等
-				fields[i] = p.AppendKeyword(jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())), elem)
+				fields[i] = p.AppendKeyword(jen.Id(subField.Name).Map(p.TypeToJenStatement(subField.Type.Key())), elem).Tag(map[string]string{"json": subField.Tag.Get("json")})
 			}
 
 		case reflect.Slice:
@@ -85,15 +85,15 @@ func (p *GoCodeBuilder) genType(t reflect.Type, structName string, printPrefix s
 			if elem.Kind() == reflect.Struct {
 				sliceSubStruct := structName + subField.Name
 				p.genType(elem, sliceSubStruct, printPrefix+"  ")
-				fields[i] = jen.Id(subField.Name).Index().Id(sliceSubStruct)
+				fields[i] = jen.Id(subField.Name).Index().Id(sliceSubStruct).Tag(map[string]string{"json": subField.Tag.Get("json")})
 			} else {
 				// 常规类型 int, float, string等
-				fields[i] = p.AppendKeyword(jen.Id(subField.Name).Index(), elem) //  Id(elem.Kind().String())
+				fields[i] = p.AppendKeyword(jen.Id(subField.Name).Index(), elem).Tag(map[string]string{"json": subField.Tag.Get("json")}) //  Id(elem.Kind().String())
 			}
 
 		default:
 			// 基础类型
-			fields[i] = p.AppendKeyword(jen.Id(subField.Name), subField.Type)
+			fields[i] = p.AppendKeyword(jen.Id(subField.Name), subField.Type).Tag(map[string]string{"json": subField.Tag.Get("json")})
 		}
 	}
 	if structName == "" {

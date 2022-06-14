@@ -91,9 +91,11 @@ func (p *StructBuilder) parseField(descSkip int, column *int, prevSubName *strin
 		return field, cmn.ErrSkip
 	}
 	if currDesc == "" {
+		subName := strings.ToLower(p.rows[1][*column])
 		field = reflect.StructField{
 			Type: p.memberType(0, *column),
-			Name: cmn.CamelName(p.rows[1][*column]),
+			Name: cmn.CamelName(subName),
+			Tag:  p.jsonTag(subName),
 		}
 		*column++
 		return field, nil
@@ -116,10 +118,13 @@ func (p *StructBuilder) parseField(descSkip int, column *int, prevSubName *strin
 	}
 	switch subType {
 	case "member":
+		memberSubName := p.rows[1][*column]
+		memberSubName = strings.ToLower(memberSubName)
 		// 子成员
 		field = reflect.StructField{
 			Type: p.memberType(0, *column),
-			Name: cmn.CamelName(p.rows[1][*column]),
+			Name: cmn.CamelName(memberSubName), // 类名、字段名采用camel
+			Tag:  p.jsonTag(memberSubName),     // json字段采用snake全小写
 		}
 		*column++
 
@@ -139,6 +144,10 @@ func (p *StructBuilder) parseField(descSkip int, column *int, prevSubName *strin
 
 	*prevSubName = subName
 	return field, err
+}
+
+func (p *StructBuilder) jsonTag(fieldSnakeName string) reflect.StructTag {
+	return reflect.StructTag(fmt.Sprintf("json:\"%s,omitempty\"", fieldSnakeName))
 }
 
 // 获取数据簇
@@ -223,15 +232,19 @@ func (p *StructBuilder) parseFieldSlice(subName string, column *int, sentry int)
 		fs = append(fs, sfield)
 	}
 	var subStruct reflect.Type
-	if len(fs) > 1 {
+	if len(fs) == 1 {
+		subStruct = fs[0].Type
+	} else if len(fs) > 1 {
 		subStruct = reflect.StructOf(fs)
 	} else {
-		subStruct = fs[0].Type
+		plog.Errorf("fail to parseFieldSlice!! subName=%v column=%v sentry=%v", subName, *column, sentry)
+		return field, cmn.ErrBadXlsx
 	}
 	sliceStruct := reflect.SliceOf(subStruct)
 	field = reflect.StructField{
 		Type: sliceStruct,
 		Name: cmn.CamelName(subName),
+		Tag:  p.jsonTag(subName),
 	}
 	if strings.EqualFold(field.Name, subName) == false {
 		plog.Error("slice只能使用Camel命名, ", subName, "!=", field.Name)
@@ -268,6 +281,7 @@ func (p *StructBuilder) parseFieldMap(subName string, column *int, sentry int) (
 	field = reflect.StructField{
 		Type: mapStruct,
 		Name: cmn.CamelName(subName),
+		Tag:  p.jsonTag(subName),
 	}
 	if strings.EqualFold(field.Name, subName) == false {
 		plog.Error("map只能使用Camel命名, ", subName, "!=", field.Name)
@@ -298,6 +312,7 @@ func (p *StructBuilder) parseFieldStruct(subName string, column *int, sentry int
 	field = reflect.StructField{
 		Type: subStruct,
 		Name: cmn.CamelName(subName),
+		Tag:  p.jsonTag(subName),
 	}
 	*column = sentry
 	return field, nil
