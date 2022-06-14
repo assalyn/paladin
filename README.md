@@ -31,3 +31,6 @@ xlsx为核心，代码全解耦，以策划友好性为第一位
 * {map} 大括号用于表达map
 * \- 横杠用于略去解析（多用于备注，说明表单内容，但不输出）
 * 同一slice/map的不同member，使用[slice]#1 字段描述，比如slice类型有type和value两个字段，则这两个字段的desc栏都填[slice]#1, 第二个value的desc栏填[slice]#2
+
+# 代码生成规则
+* 使用字段名的全小写输出为json字段，使用此字段的驼峰式作为字段类名. 比如spinType, 输出的json文件类型为"spintype"，输出的类成员名为Spintype
