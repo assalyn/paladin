@@ -68,9 +68,16 @@ func (p *XlsxReader) Check(tableName string, xlsx *excelize.File, sheets []strin
 		sheetsData = append(sheetsData, rows)
 	}
 	sentinelSheet := sheetsData[0]
-	if len(sentinelSheet) < 4 {
-		plog.Error("rows < 4")
-		return cmn.ErrBadXlsx
+	if p.Horizontal == false {
+		if len(sentinelSheet) < 4 {
+			plog.Error("rows < 4")
+			return cmn.ErrBadXlsx
+		}
+	} else {
+		if len(sentinelSheet[0]) < 4 {
+			plog.Error("columns < 4")
+			return cmn.ErrBadXlsx
+		}
 	}
 	for sheetIdx := 1; sheetIdx < len(sheetNames); sheetIdx++ {
 		for row := 0; row < 4; row++ {
