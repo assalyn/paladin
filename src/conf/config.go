@@ -33,11 +33,12 @@ type Table struct {
 }
 
 type Config struct {
-	Locale     string // 多语言描述
-	EnumFile   string // 枚举文件
-	LocaleFile string // 多语言文件
-	IgnoreLine int    // 忽略的头几行
-	Tables     map[string]*Table
+	Locale           string // 多语言描述
+	CompressSliceMap bool   // 压缩slice/map. 将只有1个字段的slice/map 内联结构展开，成为基本类型slice/map
+	EnumFile         string // 枚举文件
+	LocaleFile       string // 多语言文件
+	IgnoreLine       int    // 忽略的头几行
+	Tables           map[string]*Table
 }
 
 func Init(confFile string) {

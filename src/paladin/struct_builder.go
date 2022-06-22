@@ -2,6 +2,7 @@ package paladin
 
 import (
 	"assalyn/paladin/cmn"
+	"assalyn/paladin/conf"
 	"assalyn/paladin/frm/plog"
 	"fmt"
 	"reflect"
@@ -232,10 +233,14 @@ func (p *StructBuilder) parseFieldSlice(subName string, column *int, sentry int)
 		fs = append(fs, sfield)
 	}
 	var subStruct reflect.Type
-	if len(fs) == 1 {
-		subStruct = fs[0].Type
-	} else if len(fs) > 1 {
+	if len(fs) > 1 {
 		subStruct = reflect.StructOf(fs)
+	} else if len(fs) == 1 {
+		if conf.Cfg.CompressSliceMap {
+			subStruct = fs[0].Type
+		} else {
+			subStruct = reflect.StructOf(fs)
+		}
 	} else {
 		plog.Errorf("fail to parseFieldSlice!! subName=%v column=%v sentry=%v", subName, *column, sentry)
 		return field, cmn.ErrBadXlsx
@@ -274,8 +279,15 @@ func (p *StructBuilder) parseFieldMap(subName string, column *int, sentry int) (
 	var subStruct reflect.Type
 	if len(fs) > 1 {
 		subStruct = reflect.StructOf(fs)
+	} else if len(fs) == 1 {
+		if conf.Cfg.CompressSliceMap {
+			subStruct = fs[0].Type
+		} else {
+			subStruct = reflect.StructOf(fs)
+		}
 	} else {
-		subStruct = fs[0].Type
+		plog.Errorf("fail to parseFieldMap!! subName=%v column=%v sentry=%v", subName, *column, sentry)
+		return field, cmn.ErrBadXlsx
 	}
 	mapStruct := reflect.MapOf(fs[0].Type, subStruct)
 	field = reflect.StructField{
