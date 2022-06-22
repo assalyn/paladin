@@ -34,3 +34,12 @@ xlsx为核心，代码全解耦，以策划友好性为第一位
 
 # 代码生成规则
 * 使用字段名的全小写输出为json字段，使用此字段的驼峰式作为字段类名. 比如spinType, 输出的json文件类型为"spintype"，输出的类成员名为Spintype
+
+# 配置文件配置项
+* workbook   string     // 工作簿
+* sheet      []string   // 子表
+* horizontal bool       // 是否水平解析
+* output     []string   // 输出类型选项 json, cs, go. 默认全输出
+* type       string     // 表类型 server_only; client_local_read
+* duplicate  bool       // 重复结构, 设置为true, 避免重复解析出现的校验错误
+* enums      []EnumItem // 枚举替换
