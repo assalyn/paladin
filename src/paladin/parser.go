@@ -79,6 +79,9 @@ func (p *Parser) loadFiles() {
 
 	// 加载xlsx文件
 	for tblName, tbl := range conf.Cfg.Tables {
+		if tbl.Duplicate { // 对于同一张表的重复映射，不再重复解析
+			continue
+		}
 		reader := NewXlsxReader(tbl.AutoId, tbl.Horizontal)
 		info, err := reader.Read(tblName, tbl.Workbook, tbl.Sheet, tbl.Enums)
 		if err != nil {

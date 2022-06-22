@@ -29,6 +29,7 @@ type Table struct {
 	Horizontal bool       // 是否水平解析
 	Output     []string   // 输出类型选项 json, cs, go. 默认全输出
 	Type       string     // 表类型 server_only; client_local_read
+	Duplicate  bool       // 重复结构, 设置为true
 	Enums      []EnumItem // 枚举替换
 }
 
