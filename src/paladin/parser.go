@@ -448,8 +448,8 @@ func (p *Parser) genGolangStub(codeDir string) {
 	}
 	// 输出api.dbc.go提供公共接口
 	c := NewGoCodeBuilder(codeDir, p.outputDir, "init")
-	funcName := c.GenReloadAllFile(LoadFuncNames)
-	c.GenInit(funcName)
+	_ = c.GenReloadAllFile(LoadFuncNames)
+	//c.GenInit(funcName) 不执行init默认加载，虽然方便，但会给日常使用造成巨大的负担，日常的结构引用并不需要加载dbc的那些数据文件，用到的自然会去初始化dbc模块
 	c.Output()
 }
 
