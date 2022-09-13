@@ -5,11 +5,13 @@ import (
 	"assalyn/paladin/frm/plog"
 	"bytes"
 	"fmt"
-	"github.com/dave/jennifer/jen"
+	"go/format"
 	"os"
 	"reflect"
 	"runtime"
 	"sort"
+
+	"github.com/dave/jennifer/jen"
 )
 
 type GoCodeBuilder struct {
@@ -145,7 +147,7 @@ func (p *GoCodeBuilder) genLoadFile() string {
 			jen.Return(),
 		),
 		jen.Id("defer").Op(" ").Id("file").Dot("Close").Call(),
-		jen.Id("decoder").Op(":=").Qual("encoding/json", "NewDecoder").Call(jen.Id("file")),
+		jen.Id("decoder").Op(":=").Qual("git.yuetanggame.com/sdev/kylix/json", "NewDecoder").Call(jen.Id("file")),
 		jen.Id("err").Op("=").Id("decoder").Dot("Decode").Call(jen.Id("&tbl"+p.structName)),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to decode!!"), jen.Id("err"))),
@@ -195,7 +197,13 @@ func (p *GoCodeBuilder) Output() {
 	} else {
 		bs = buf.Bytes()
 	}
-	if err := os.WriteFile(filename, bs, 0644); err != nil {
+	var err error
+	bs, err = format.Source(bs)
+	if err != nil {
+		plog.Error("fail to format.Source!! ", err)
+		return
+	}
+	if err = os.WriteFile(filename, bs, 0644); err != nil {
 		plog.Error("fail to ioutil.WriteFile!! ", err)
 		return
 	}
