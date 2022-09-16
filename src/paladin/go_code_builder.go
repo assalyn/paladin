@@ -147,7 +147,7 @@ func (p *GoCodeBuilder) genLoadFile() string {
 			jen.Return(),
 		),
 		jen.Id("defer").Op(" ").Id("file").Dot("Close").Call(),
-		jen.Id("decoder").Op(":=").Qual("git.yuetanggame.com/sdev/kylix/json", "NewDecoder").Call(jen.Id("file")),
+		jen.Id("decoder").Op(":=").Qual("git.yuetanggame.com/sdev/tkpkg/json", "NewDecoder").Call(jen.Id("file")),
 		jen.Id("err").Op("=").Id("decoder").Dot("Decode").Call(jen.Id("&tbl"+p.structName)),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to decode!!"), jen.Id("err"))),
@@ -190,9 +190,7 @@ func (p *GoCodeBuilder) Output() {
 		return
 	}
 	var bs []byte
-	if runtime.GOOS == "windows" {
-		bs = bytes.Replace(buf.Bytes(), []byte("\n"), []byte("\r\n"), -1)
-	} else if runtime.GOOS == "darwin" {
+	if runtime.GOOS == "darwin" {
 		bs = bytes.Replace(buf.Bytes(), []byte("\n"), []byte("\r"), -1)
 	} else {
 		bs = buf.Bytes()
