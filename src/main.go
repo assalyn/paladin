@@ -12,6 +12,7 @@ var (
 	output        = flag.String("output", "data", "output directory")
 	stub          = flag.String("stub", "stub", "generated stub code files directory")
 	locale        = flag.String("locale", "locale", "generated locale files directory")
+	pThirdJson    = flag.String("json", "encoding/json", "specify third json package e.g. git.example.com/frm/json") // 第三方json包
 	exportJsonCfg = flag.Bool("export_json_config", false, "export config.toml in json datatype")
 	golang        = flag.Bool("go", false, "generate golang stub code")
 	csharp        = flag.Bool("cs", false, "generate csharp stub code")
@@ -31,6 +32,6 @@ func main() {
 	plog.InitLog("app.log", plog.LOG_TRACE)
 
 	// 启动解析器
-	parser := paladin.NewParser(*output, *stub, *locale, *golang, *csharp)
+	parser := paladin.NewParser(*output, *stub, *locale, *golang, *csharp, *pThirdJson)
 	parser.Start()
 }

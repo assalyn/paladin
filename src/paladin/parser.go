@@ -28,9 +28,10 @@ type Parser struct {
 	localeDir string // 多语言目录
 	genGolang bool   // 是否生成golang桩代码
 	genCsharp bool   // 是否生成csharp桩代码
+	thirdJson string // 是否使用第三方json库
 }
 
-func NewParser(outputDir string, stubDir string, localeDir string, genGolang bool, genCsharp bool) *Parser {
+func NewParser(outputDir string, stubDir string, localeDir string, genGolang bool, genCsharp bool, thirdJson string) *Parser {
 	p := new(Parser)
 	p.Xlsx = make(map[string]*XlsxInfo)
 
@@ -44,6 +45,7 @@ func NewParser(outputDir string, stubDir string, localeDir string, genGolang boo
 	p.localeDir = localeDir
 	p.genGolang = genGolang
 	p.genCsharp = genCsharp
+	p.thirdJson = thirdJson
 	return p
 }
 
@@ -181,7 +183,7 @@ func (p *Parser) genStubCode() {
 	}
 }
 
-////////////////////////////////////// 子函数 //////////////////////////////////////
+// //////////////////////////////////// 子函数 //////////////////////////////////////
 // 解析xlsx文件
 func (p *Parser) parseXlsx(tableName string, info *XlsxInfo) {
 	xlsxConf := conf.Cfg.Tables[tableName]
@@ -440,7 +442,7 @@ func (p *Parser) genGolangStub(codeDir string) {
 		}
 		for _, v := range data {
 			c := NewGoCodeBuilder(codeDir, p.outputDir, fileName)
-			loadFuncName := c.GenStructWithName(v, fileName)
+			loadFuncName := c.GenStructWithName(v, fileName, p.thirdJson)
 			LoadFuncNames = append(LoadFuncNames, loadFuncName)
 			c.Output()
 			break

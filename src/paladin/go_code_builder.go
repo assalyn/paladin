@@ -32,7 +32,7 @@ func NewGoCodeBuilder(codeDir string, dataDir string, fileName string) *GoCodeBu
 	return c
 }
 
-func (p *GoCodeBuilder) GenStructWithName(obj interface{}, structName string) string {
+func (p *GoCodeBuilder) GenStructWithName(obj interface{}, structName string, thirdJson string) string {
 	p.structName = cmn.CamelName(structName)
 	t := reflect.TypeOf(obj)
 	for t.Kind() == reflect.Ptr {
@@ -42,20 +42,8 @@ func (p *GoCodeBuilder) GenStructWithName(obj interface{}, structName string) st
 	p.genValue()
 	p.genGet()
 	p.genGetAll()
-	loadFuncName := p.genLoadFile()
+	loadFuncName := p.genLoadFile(thirdJson)
 	return loadFuncName
-}
-
-func (p *GoCodeBuilder) GenType(t reflect.Type, structName string) {
-	p.structName = structName
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	p.genType(t, p.structName, "")
-	p.genValue()
-	p.genGet()
-	p.genGetAll()
-	p.genLoadFile()
 }
 
 // 这个代码问题还挺多的
@@ -127,33 +115,37 @@ func (p *GoCodeBuilder) genGetAll() {
 }
 
 /*
-	file, err := os.Open("bin/output/location.json")
+file, err := os.Open("bin/output/location.json")
+
 	if err != nil {
-		plog.Error(err)
+		fmt.Println(err)
 		return
 	}
+
 	defer file.Close()
 	decoder := json.NewDecoder(file)
-	if err = decoder.Decode(&tblLocation); err != nil {
-		plog.Error(err)
+	err = decoder.Decode(&tblLocation)
+	if err != nil {
+		fmt.Println(err)
 	}
 */
-func (p *GoCodeBuilder) genLoadFile() string {
+func (p *GoCodeBuilder) genLoadFile(thirdJson string) string {
 	funcName := "LoadFile" + p.structName
-	p.jfile.Func().Id(funcName).Params().Block(
-		jen.List(jen.Id("file"), jen.Id("err")).Op(":=").Qual("os", "Open").Call(jen.Lit(p.dataDir+"/"+p.fileName+".json")),
+	statements := []jen.Code{
+		jen.List(jen.Id("file"), jen.Id("err")).Op(":=").Qual("os", "Open").Call(jen.Lit(p.dataDir + "/" + p.fileName + ".json")),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to open!!"), jen.Id("err"))),
 			jen.Return(),
 		),
 		jen.Id("defer").Op(" ").Id("file").Dot("Close").Call(),
-		jen.Id("decoder").Op(":=").Qual("git.yuetanggame.com/sdev/tkpkg/json", "NewDecoder").Call(jen.Id("file")),
-		jen.Id("err").Op("=").Id("decoder").Dot("Decode").Call(jen.Id("&tbl"+p.structName)),
+		jen.Id("decoder").Op(":=").Qual(thirdJson, "NewDecoder").Call(jen.Id("file")),
+		jen.Id("err").Op("=").Id("decoder").Dot("Decode").Call(jen.Id("&tbl" + p.structName)),
 		jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
 			jen.Qual("fmt", "Println").Call(jen.List(jen.Lit("fail to decode!!"), jen.Id("err"))),
 			jen.Return(),
 		),
-	).Line()
+	}
+	p.jfile.Func().Id(funcName).Params().Block(statements...).Line()
 	return funcName
 }
 
