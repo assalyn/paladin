@@ -16,6 +16,7 @@ var (
 	exportJsonCfg = flag.Bool("export_json_config", false, "export config.toml in json datatype")
 	golang        = flag.Bool("go", false, "generate golang stub code")
 	csharp        = flag.Bool("cs", false, "generate csharp stub code")
+	ns            = flag.String("ns", "Scheme", "specify namespace")
 )
 
 // 参数解析
@@ -32,6 +33,7 @@ func main() {
 	plog.InitLog("app.log", plog.LOG_TRACE)
 
 	// 启动解析器
-	parser := paladin.NewParser(*output, *stub, *locale, *golang, *csharp, *pThirdJson)
+	parser := paladin.NewParser(*output, *stub, *locale, *golang, *csharp, *pThirdJson, *ns)
+
 	parser.Start()
 }

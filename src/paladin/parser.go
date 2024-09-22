@@ -29,9 +29,10 @@ type Parser struct {
 	genGolang bool   // 是否生成golang桩代码
 	genCsharp bool   // 是否生成csharp桩代码
 	thirdJson string // 是否使用第三方json库
+	ns        string // namespace
 }
 
-func NewParser(outputDir string, stubDir string, localeDir string, genGolang bool, genCsharp bool, thirdJson string) *Parser {
+func NewParser(outputDir string, stubDir string, localeDir string, genGolang bool, genCsharp bool, thirdJson string, ns string) *Parser {
 	p := new(Parser)
 	p.Xlsx = make(map[string]*XlsxInfo)
 
@@ -46,6 +47,7 @@ func NewParser(outputDir string, stubDir string, localeDir string, genGolang boo
 	p.genGolang = genGolang
 	p.genCsharp = genCsharp
 	p.thirdJson = thirdJson
+	p.ns = ns
 	return p
 }
 
@@ -464,7 +466,7 @@ func (p *Parser) genCsharpStub(codeDir string) {
 		}
 		for _, v := range data {
 			var csFileName = cmn.CamelName(fileName)
-			c := NewCsharpCodeBuilder(codeDir, p.outputDir, csFileName)
+			c := NewCsharpCodeBuilder(codeDir, p.outputDir, csFileName, p.ns)
 			c.GenStructWithName(v, csFileName)
 			c.Output()
 			break
