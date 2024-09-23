@@ -3,6 +3,7 @@ package cmn
 import (
 	"assalyn/paladin/frm/plog"
 	"regexp"
+	"strings"
 )
 
 // 首字母大写，蛇形转驼峰
@@ -46,4 +47,12 @@ func ByteToUpper(b byte) byte {
 		return b - 32
 	}
 	return b
+}
+
+// FirstCharLower 字符串首字母小写
+func FirstCharLower(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToLower(s[:1]) + s[1:]
 }

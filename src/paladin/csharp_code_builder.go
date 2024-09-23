@@ -62,37 +62,38 @@ func (p *CsharpCodeBuilder) genType(t reflect.Type, structName string, printPref
 	for i := 0; i < t.NumField(); i++ {
 		subField := t.Field(i)
 		//fmt.Printf("%sfield %d %s %s\n", printPrefix+"  ", i, t.Field(i).Name, t.Field(i).Type.Kind().String())
+		subFieldName := cmn.FirstCharLower(subField.Name)
 		switch subField.Type.Kind() {
 		case reflect.Struct:
-			subStruct := structName + subField.Name
+			subStruct := structName + subFieldName
 			p.genType(subField.Type, subStruct, printPrefix+"  ")
-			s.AddField(subStruct, subField.Name)
+			s.AddField(subStruct, subFieldName)
 
 		case reflect.Map:
 			elem := subField.Type.Elem()
 			if elem.Kind() == reflect.Struct {
-				mapSubStruct := structName + subField.Name
+				mapSubStruct := structName + subFieldName
 				p.genType(elem, mapSubStruct, printPrefix+"  ")
-				s.AddMap(p.TypeName(subField.Type.Key()), mapSubStruct, subField.Name)
+				s.AddMap(p.TypeName(subField.Type.Key()), mapSubStruct, subFieldName+"s")
 			} else {
 				// 常规类型 int, float, string等
-				s.AddMap(p.TypeName(subField.Type.Key()), p.TypeName(elem), subField.Name)
+				s.AddMap(p.TypeName(subField.Type.Key()), p.TypeName(elem), subFieldName+"s")
 			}
 
 		case reflect.Slice:
 			elem := subField.Type.Elem()
 			if elem.Kind() == reflect.Struct {
-				sliceSubStruct := structName + subField.Name
+				sliceSubStruct := structName + subFieldName
 				p.genType(elem, sliceSubStruct, printPrefix+"  ")
-				s.AddSlice(sliceSubStruct, subField.Name)
+				s.AddSlice(sliceSubStruct, subFieldName+"s")
 			} else {
 				// 常规类型 int, float, string等
-				s.AddSlice(p.TypeName(elem), subField.Name)
+				s.AddSlice(p.TypeName(elem), subFieldName+"s")
 			}
 
 		default:
 			// 基础类型
-			s.AddField(p.TypeName(subField.Type), subField.Name)
+			s.AddField(p.TypeName(subField.Type), subFieldName)
 		}
 	}
 	if structName == "" {
