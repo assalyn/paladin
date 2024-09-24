@@ -65,14 +65,14 @@ func (p *CsharpCodeBuilder) genType(t reflect.Type, structName string, printPref
 		subFieldName := cmn.FirstCharLower(subField.Name)
 		switch subField.Type.Kind() {
 		case reflect.Struct:
-			subStruct := structName + subFieldName
+			subStruct := structName + subField.Name // 这里不能用小写
 			p.genType(subField.Type, subStruct, printPrefix+"  ")
 			s.AddField(subStruct, subFieldName)
 
 		case reflect.Map:
 			elem := subField.Type.Elem()
 			if elem.Kind() == reflect.Struct {
-				mapSubStruct := structName + subFieldName
+				mapSubStruct := structName + subField.Name
 				p.genType(elem, mapSubStruct, printPrefix+"  ")
 				s.AddMap(p.TypeName(subField.Type.Key()), mapSubStruct, subFieldName)
 			} else {
@@ -83,7 +83,7 @@ func (p *CsharpCodeBuilder) genType(t reflect.Type, structName string, printPref
 		case reflect.Slice:
 			elem := subField.Type.Elem()
 			if elem.Kind() == reflect.Struct {
-				sliceSubStruct := structName + subFieldName
+				sliceSubStruct := structName + subField.Name
 				p.genType(elem, sliceSubStruct, printPrefix+"  ")
 				s.AddSlice(sliceSubStruct, subFieldName)
 			} else {
