@@ -74,10 +74,10 @@ func (p *CsharpCodeBuilder) genType(t reflect.Type, structName string, printPref
 			if elem.Kind() == reflect.Struct {
 				mapSubStruct := structName + subFieldName
 				p.genType(elem, mapSubStruct, printPrefix+"  ")
-				s.AddMap(p.TypeName(subField.Type.Key()), mapSubStruct, subFieldName+"s")
+				s.AddMap(p.TypeName(subField.Type.Key()), mapSubStruct, subFieldName)
 			} else {
 				// 常规类型 int, float, string等
-				s.AddMap(p.TypeName(subField.Type.Key()), p.TypeName(elem), subFieldName+"s")
+				s.AddMap(p.TypeName(subField.Type.Key()), p.TypeName(elem), subFieldName)
 			}
 
 		case reflect.Slice:
@@ -85,10 +85,10 @@ func (p *CsharpCodeBuilder) genType(t reflect.Type, structName string, printPref
 			if elem.Kind() == reflect.Struct {
 				sliceSubStruct := structName + subFieldName
 				p.genType(elem, sliceSubStruct, printPrefix+"  ")
-				s.AddSlice(sliceSubStruct, subFieldName+"s")
+				s.AddSlice(sliceSubStruct, subFieldName)
 			} else {
 				// 常规类型 int, float, string等
-				s.AddSlice(p.TypeName(elem), subFieldName+"s")
+				s.AddSlice(p.TypeName(elem), subFieldName)
 			}
 
 		default:
